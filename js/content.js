@@ -182,8 +182,8 @@ window.DEFAULT_CONTENT = {
       "Loin de se laisser abattre par cette insécurité, Étoile de Framboisier puise dans ses craintes une force insoupçonnée. Il est animé par le désir ardent de prouver sa valeur et de montrer qu'il est digne du choix du Clan des Étoiles. Il est prêt à tout, à travailler plus dur que n'importe qui et à affronter ses propres faiblesses, pour devenir le meilleur meneur que le Clan du Tonnerre n'ait jamais connu. Derrière son calme apparent, brûle la volonté de marquer l'histoire de la forêt par sa sagesse et sa protection.",
     ],
     autres_clans: [
-      { nom: "Clan du Vent", texte: "Étoile de Framboisier n'a pas encore d'avis bien tranché. Fidèle à son habitude de rester dans son propre monde et d'observer de loin, il estime qu'il ne les connaît pas encore assez bien pour s'exprimer ou porter un jugement sur leur manière de vivre. Cependant, malgré son côté parfois distant, son cœur reste profondément pacifique. De ce qu'il a pu entendre à leur sujet, il garde une porte ouverte : si jamais les guerriers de la lande venaient à avoir besoin d'une quelconque aide, il n'hésiterait pas à la leur accorder, considérant que l'entraide doit primer sur l'ignorance." },
-      { nom: "Clan de l'Ombre", texte: "Ses sentiments sont beaucoup plus mitigés. Les rumeurs qui circulent sur Étoile Douce, combinées à ce qu'il a pu observer lui-même lors de la dernière Assemblée, le plongent dans un certain malaise. Il n'est pas tout à fait à l'aise face à l'énergie qui se dégage de ce clan et de sa meneuse. Pourtant, là où d'autres ne verraient que de l'hostilité, Étoile de Framboisier ne peut s'empêcher de ressentir une part de pitié pour eux. Il regarde leur situation avec une pointe de tristesse, se demandant si leur attitude n'est pas simplement le reflet de souffrances cachées qu'il aimerait, au fond, pouvoir apaiser." },
+      { nom: "Clan du Vent", chef: "", image: "", attitude: "neutre", texte: "Étoile de Framboisier n'a pas encore d'avis bien tranché. Fidèle à son habitude de rester dans son propre monde et d'observer de loin, il estime qu'il ne les connaît pas encore assez bien pour s'exprimer ou porter un jugement sur leur manière de vivre. Cependant, malgré son côté parfois distant, son cœur reste profondément pacifique. De ce qu'il a pu entendre à leur sujet, il garde une porte ouverte : si jamais les guerriers de la lande venaient à avoir besoin d'une quelconque aide, il n'hésiterait pas à la leur accorder, considérant que l'entraide doit primer sur l'ignorance." },
+      { nom: "Clan de l'Ombre", chef: "Étoile Douce", image: "", attitude: "mefiance", texte: "Ses sentiments sont beaucoup plus mitigés. Les rumeurs qui circulent sur Étoile Douce, combinées à ce qu'il a pu observer lui-même lors de la dernière Assemblée, le plongent dans un certain malaise. Il n'est pas tout à fait à l'aise face à l'énergie qui se dégage de ce clan et de sa meneuse. Pourtant, là où d'autres ne verraient que de l'hostilité, Étoile de Framboisier ne peut s'empêcher de ressentir une part de pitié pour eux. Il regarde leur situation avec une pointe de tristesse, se demandant si leur attitude n'est pas simplement le reflet de souffrances cachées qu'il aimerait, au fond, pouvoir apaiser." },
     ],
     etoiles: [
       "Malgré les signes terrifiants envoyés par la Toison Argentée, le chêne foudroyé en pleine assemblée, la dissolution du Clan de la Rivière et le silence imposé à Étoile Douce sous une lune assombrie, la foi d'Étoile de Framboisier reste absolue.",
@@ -196,6 +196,21 @@ window.DEFAULT_CONTENT = {
     { titre: "En pose", image: "assets/framboisier-pose.webp", description: "Les freesias mauves derrière les oreilles, la queue en volute." },
   ],
 
+  // Règne : { lune, type: decision|diplomatie|ceremonie|crise|clan|autre, titre, texte }
+  regne: [
+    { lune: "15", type: "ceremonie", titre: "Choisi par le Clan des Étoiles", texte: "<p>À la mort d'Étoile Brumeuse, le Clan des Étoiles ne désigne pas le lieutenant mais Duvet de Framboisier. Du haut de ses 15 lunes, il reçoit le nom d'Étoile de Framboisier et prend la tête du Clan du Tonnerre.</p>" },
+  ],
+
+  // Vies perdues : { lune, cause }
+  vies_perdues: [
+    { lune: "", cause: "<p>Perdue lors de la chute depuis les Rochers du Soleil, où son frère l'a poussé pour vérifier si son nouveau statut de chef lui octroyait réellement les neuf vies. Il lui en reste huit.</p>" },
+  ],
+
+  // Carnet de santé : { titre, type: blessure|maladie|poison|autre, lune_debut, lune_fin, en_cours, pv_perdus, cause, soins, sequelles, sequelles_texte, marque, fragilite, marque_texte }
+  sante: [
+    { titre: "La chute des Rochers du Soleil", type: "blessure", lune_debut: "", lune_fin: "", en_cours: "non", pv_perdus: "", cause: "<p>Poussé du haut des pierres géantes par son propre frère. Il y a perdu sa première vie.</p>", soins: "", sequelles: "non", sequelles_texte: "", marque: "oui", fragilite: "non", marque_texte: "<p>Une longue cicatrice court tout le long de sa queue.</p>" },
+  ],
+
   // Sections libres : { titre, paragraphes: [...], image } — s'ajoutent depuis le dashboard
   libres: [],
 
@@ -204,6 +219,7 @@ window.DEFAULT_CONTENT = {
     sections: [
       { id: "personnage", nom: "Personnage", actif: "oui" },
       { id: "histoire", nom: "Histoire", actif: "oui" },
+      { id: "meneur", nom: "Meneur", actif: "oui" },
       { id: "relations", nom: "Relations", actif: "oui" },
       { id: "scenes", nom: "Scènes RP", actif: "oui" },
       { id: "galerie", nom: "Galerie", actif: "oui" },

@@ -31,6 +31,7 @@
   const clans = () => [...new Set([...(state.famille || []), ...(state.relations || [])].map((m) => m.groupe).filter(Boolean))];
   const names = () => [...(state.famille || []), ...(state.relations || [])].map((m) => m.nom).filter(Boolean);
   const lunesNow = () => state.identite.lunes;
+  const numLune = (v) => { const m = String(v ?? "").match(/\d+/); return m ? +m[0] : 1e9; };
 
   const sumAvis = (it) => { const a = O.APP[it.appreciation]; return { title: "Lune " + (it.lune === "" || it.lune == null ? "?" : it.lune), sub: [a ? a.label : "", it.respect === "oui" ? "respect" : "", it.mitige === "oui" ? "mitigé" : "", O.ETAT[it.etat] || "", O.plain(it.texte).slice(0, 60)].filter(Boolean).join(" · "), badges: a ? [a.glyph] : [] }; };
   const relFields = (famille) => [
@@ -72,7 +73,33 @@
       { id: "physique", ic: "🐾", label: "Physique", help: "Description, points forts/faibles, accessoires, cicatrices. Les parties vides ne s'affichent pas.", defs: [R("physique.description", "Description", { tall: true }), F.strs("physique.signes", "Signes distinctifs (petites étiquettes)"), traits("physique.forts", "Points forts"), traits("physique.faibles", "Points faibles"), R("physique.accessoires", "Accessoires"), R("physique.cicatrices", "Cicatrices"), R("physique.handicap", "Handicap")] },
       { id: "gouts", ic: "🍃", label: "Goûts & peurs", help: "Ce qu'il aime, déteste, craint, ses habitudes. Une catégorie vide disparaît du site.", defs: [traits("gouts.aime", "Ce qu'il aime"), traits("gouts.deteste", "Ce qu'il déteste"), traits("gouts.peurs", "Peurs & phobies"), traits("gouts.habitudes", "Habitudes & tics")] },
       { id: "noms", ic: "🏷️", label: "Noms", help: "Un nom par étape. « Ancien nom » le barre sur le site.", defs: [F.items("noms", "Noms", [F.row([F.text("etape", "Étape"), F.text("nom", "Nom"), F.num("lune", "Lune (optionnel)")]), F.yes("ancien", "Ancien nom (affiché barré)"), R("texte", "Explication")], { sum: (it) => ({ title: it.nom || "—", sub: it.etape }), addLabel: "+ Ajouter une étape" })] },
-      { id: "convictions", ic: "⭐", label: "Convictions", help: "Son rapport au clan, aux autres clans et au Clan des Étoiles.", defs: [R("convictions.clan", "Relation au clan"), F.items("convictions.autres_clans", "Avis sur les autres clans", [F.text("nom", "Clan"), R("texte", "Avis")], { sum: (it) => ({ title: it.nom || "—", sub: O.plain(it.texte).slice(0, 80) }), addLabel: "+ Ajouter un clan" }), R("convictions.etoiles", "Croyance (Clan des Étoiles)")] },
+      { id: "sante", ic: "🩹", label: "Carnet de santé", help: "Blessures, maladies, empoisonnements : à quelle lune, jusqu'à quand, les soins, les PV perdus, les séquelles, une marque ou une fragilité. Le site en tire des statistiques et une liste « à surveiller ».", defs: [F.items("sante", "Entrées du carnet", [
+        F.text("titre", "Titre", { ph: "Patte foulée, toux de brume, morsure de serpent…" }),
+        F.row([F.sel("type", "Type", [["blessure", "🩹 Blessure"], ["maladie", "🤒 Maladie"], ["poison", "☠️ Empoisonnement"], ["autre", "✚ Autre"]]), F.num("pv_perdus", "PV perdus (optionnel)")]),
+        F.row([F.num("lune_debut", "À partir de la lune"), F.num("lune_fin", "Jusqu'à la lune", { hint: "laisse vide si c'est en cours" })]),
+        F.yes("en_cours", "Toujours en cours", { def: "non" }),
+        R("cause", "Ce qui s'est passé"),
+        R("soins", "Soins reçus"),
+        F.yes("sequelles", "Il en reste des séquelles", { def: "non" }),
+        R("sequelles_texte", "Lesquelles ?"),
+        F.row([F.yes("marque", "Laisse une marque sur le corps", { def: "non" }), F.yes("fragilite", "Laisse une fragilité physique", { def: "non" })]),
+        R("marque_texte", "Précisions (où, laquelle, ce que ça change…)"),
+      ], { sum: (it) => ({ title: it.titre || "(sans titre)", sub: [(it.lune_debut !== "" && it.lune_debut != null) ? "lune " + it.lune_debut + (it.en_cours === "oui" ? " → en cours" : (it.lune_fin !== "" && it.lune_fin != null ? " → " + it.lune_fin : "")) : "", it.pv_perdus ? "−" + it.pv_perdus + " PV" : ""].filter(Boolean).join(" · "), badges: [it.en_cours === "oui" ? "en cours" : "guérie", it.sequelles === "oui" ? "séquelles" : "", it.marque === "oui" ? "marque" : "", it.fragilite === "oui" ? "fragilité" : ""].filter(Boolean) }), sortBy: (it) => numLune(it.lune_debut), addLabel: "+ Ajouter une entrée", blank: () => ({ titre: "", type: "blessure", lune_debut: lunesNow(), lune_fin: "", en_cours: "non", pv_perdus: "", cause: "", soins: "", sequelles: "non", sequelles_texte: "", marque: "non", fragilite: "non", marque_texte: "" }) })] },
+    ] },
+    { g: "Meneur", list: [
+      { id: "regne", ic: "⚖️", label: "Son règne", help: "Ce qu'il a fait en tant que meneur : décisions, diplomatie, cérémonies, crises… Une entrée = une ligne de la frise de la page « Meneur ».", defs: [F.items("regne", "Événements du règne", [
+        F.text("titre", "Titre"),
+        F.row([F.num("lune", "Lune"), F.sel("type", "Type", [["decision", "⚖️ Décision"], ["diplomatie", "🤝 Diplomatie"], ["ceremonie", "✨ Cérémonie"], ["crise", "⚠️ Crise"], ["clan", "🏕️ Vie du clan"], ["autre", "✦ Autre"]])]),
+        R("texte", "Ce qui s'est passé"),
+      ], { sum: (it) => ({ title: it.titre || "(sans titre)", sub: (it.lune !== "" && it.lune != null ? "lune " + it.lune : "") }), sortBy: (it) => numLune(it.lune), addLabel: "+ Ajouter un événement", blank: () => ({ titre: "", lune: lunesNow(), type: "decision", texte: "" }) })] },
+      { id: "clans", ic: "🏕️", label: "Les autres clans", help: "Son avis sur chaque clan, avec la tête de son chef (image recadrable) et son attitude.", defs: [F.items("convictions.autres_clans", "Clans", [
+        F.row([F.text("nom", "Clan"), F.text("chef", "Chef du clan")]),
+        F.sel("attitude", "Attitude de Framboisier", [["allie", "🤝 Allié"], ["sympathie", "🍓 Sympathie"], ["neutre", "☁️ Neutre"], ["mefiance", "🐛 Méfiance"], ["hostile", "⚔️ Hostile"]]),
+        F.img("image", "Tête du chef (ou emblème du clan)", { crop: true }),
+        R("texte", "Son avis"),
+      ], { sum: (it) => ({ title: it.nom || "—", sub: it.chef || "", thumb: it.image }), addLabel: "+ Ajouter un clan", blank: () => ({ nom: "", chef: "", image: "", attitude: "neutre", texte: "" }) })] },
+      { id: "vies", ic: "✦", label: "Les neuf vies", help: "Combien de vies lui restent, et lesquelles ont été perdues (lune et cause).", defs: [F.group("identite", "", [F.row([F.num("vies", "Vies restantes"), F.num("vies_max", "Vies au total")])], { bare: true }), F.items("vies_perdues", "Vies perdues", [F.num("lune", "À la lune"), R("cause", "Comment ?")], { sum: (it) => ({ title: "Vie perdue" + (it.lune !== "" && it.lune != null ? " — lune " + it.lune : ""), sub: O.plain(it.cause).slice(0, 80) }), sortBy: (it) => numLune(it.lune), addLabel: "+ Ajouter une vie perdue", blank: () => ({ lune: lunesNow(), cause: "" }) })] },
+      { id: "clan", ic: "🏕️", label: "Son clan & sa foi", help: "Son rapport au Clan du Tonnerre et sa croyance dans le Clan des Étoiles.", defs: [R("convictions.clan", "Relation au clan"), R("convictions.etoiles", "Croyance (Clan des Étoiles)")] },
     ] },
     { g: "Histoire", list: [
       { id: "histoire", ic: "📜", label: "Histoire (chapitres)", help: "Un chapitre = une sous-page de « Histoire » sur le site. Écris librement : paragraphes, sauts de ligne, intertitres, citations, séparateurs… Utilise ↑ ↓ pour les réordonner.", defs: [F.items("histoire", "Chapitres", [F.row([F.text("titre", "Titre du chapitre"), F.text("periode", "Période (étiquette)")]), R("paragraphes", "Texte du chapitre", { tall: true })], { sum: (it) => ({ title: it.titre || "(chapitre)", sub: it.periode || O.plain(it.paragraphes).slice(0, 70) }), addLabel: "+ Ajouter un chapitre" })] },
@@ -82,14 +109,13 @@
       { id: "relations", ic: "🍓", label: "Relations diverses", help: "Mentors, amis, rivaux… Pour faire évoluer un lien, ouvre la fiche et ajoute un avis à telle lune : le site en tire la fiche détaillée et la vue d'ensemble avec son curseur des lunes.", defs: [F.items("relations", "Relations", relFields(false), { sum: sumRel, addLabel: "+ Ajouter une relation", search: true, blank: relBlank })] },
     ] },
     { g: "Role-play", list: [
-      { id: "scenes", ic: "✎", label: "Scènes RP", help: "Tous les fils de Framboisier. Un clic sur un titre ouvre la scène sur le site, avec ton texte et un fond selon l'ambiance choisie. Le lien Discord est un bouton à part.", defs: [F.items("scenes", "Scènes", [
+      { id: "scenes", ic: "✎", label: "Scènes RP", help: "Les fils de role-play de Framboisier : titre, lune, personnages présents, résumé et lien Discord. Le site les range par lune.", defs: [F.items("scenes", "Scènes", [
         F.text("titre", "Titre"),
-        F.row([F.text("lune", "Lune de Framboisier", { ph: "15 ou 14–15" }), F.sel("theme", "Ambiance (fond de la page)", THEMES), F.yes("en_cours", "Scène toujours en cours", { def: "non" })]),
+        F.row([F.text("lune", "Lune de Framboisier", { ph: "15 ou 14–15" }), F.sel("theme", "Type de scène", THEMES), F.yes("en_cours", "Scène toujours en cours", { def: "non" })]),
         F.text("lien", "Lien du fil Discord", { ph: "https://discord.com/channels/…" }),
-        F.tags("participants", "Participants", { suggest: names, hint: "Ceux qui correspondent à une fiche deviennent des liens." }),
-        F.area("description", "Résumé (affiché sur la carte)", { rows: 3 }),
-        R("texte", "Texte de la scène", { tall: true }),
-      ], { sum: (it) => ({ title: it.titre || "(sans titre)", sub: [it.lune ? "lune " + it.lune : "", (THEMES.find((t) => t[0] === it.theme) || [])[1]].filter(Boolean).join(" · "), badges: [it.en_cours === "oui" ? "en cours" : "terminée"] }), addLabel: "+ Ajouter une scène", search: true, sortBy: (it) => { const m = String(it.lune ?? "").match(/\d+/); return m ? +m[0] : 1e9; }, blank: () => ({ titre: "", lune: lunesNow(), theme: "calme", en_cours: "non", lien: "", participants: [], description: "", texte: "" }) })] },
+        F.tags("participants", "Personnages présents", { suggest: names, hint: "Ceux qui correspondent à une fiche deviennent des liens." }),
+        F.area("description", "Résumé", { rows: 4 }),
+      ], { sum: (it) => ({ title: it.titre || "(sans titre)", sub: [it.lune ? "lune " + it.lune : "", (THEMES.find((t) => t[0] === it.theme) || [])[1]].filter(Boolean).join(" · "), badges: [it.en_cours === "oui" ? "en cours" : "terminée"] }), addLabel: "+ Ajouter une scène", search: true, sortBy: (it) => { const m = String(it.lune ?? "").match(/\d+/); return m ? +m[0] : 1e9; }, blank: () => ({ titre: "", lune: lunesNow(), theme: "calme", en_cours: "non", lien: "", participants: [], description: "" }) })] },
     ] },
     { g: "Médias & extras", list: [
       { id: "galerie", ic: "🖼️", label: "Galerie", help: "Les illustrations de la galerie (cliquables en grand sur le site).", defs: [F.items("galerie", "Images", [F.text("titre", "Titre"), F.img("image", "Image"), F.area("description", "Légende", { rows: 2 })], { sum: (it) => ({ title: it.titre || "(sans titre)", sub: it.description, thumb: it.image }), addLabel: "+ Ajouter une image" })] },
