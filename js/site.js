@@ -245,10 +245,36 @@
     $$(".ens input, .ens select").forEach((e) => e.addEventListener("input", f));
   }
   const FS = () => { try { return +localStorage.getItem("fr-fs") || 1.1; } catch (e) { return 1.1; } };
+  // Retranscription en dialogue : « Nom : texte », avec photo (personnage de la scène → fiche correspondante → Framboisier → initiales).
+  function photoFor(s, name) {
+    const sl = O.slug(name), p = (s.personnages || []).find((x) => O.slug(x.nom) === sl);
+    if (p && O.safeSrc(p.image)) return p.image;
+    const idx = nameIndex(), rel = RELS.find((r) => r._s === idx[sl]);
+    if (rel && O.safeSrc(rel.image)) return rel.image;
+    const me = O.slug(D.identite.nom); if (sl && (sl === me || (sl.length >= 6 && me.includes(sl)))) return D.identite.image;
+    return "";
+  }
+  const hueOf = (n) => [...String(n)].reduce((a, c) => (a * 31 + c.charCodeAt(0)) % 360, 7);
+  function chat(s) {
+    const rows = (s.repliques || []).filter((r) => r && String(r.t || "").trim());
+    if (!rows.length) return "";
+    const idx = nameIndex(), cast = unique(rows.map((r) => r.p));
+    const fmtT = (t) => String(t).split(/\n{2,}/).map((p) => `<p>${fmt(p.trim())}</p>`).join("");
+    const av = (n) => { const src = O.safeSrc(photoFor(s, n)); return `<div class="avatar sm" style="--h:${hueOf(n)}">${src ? `<img src="${esc(src)}" alt="" loading="lazy" decoding="async">` : esc(O.initials(n))}</div>`; };
+    let prev = null;
+    const body = rows.map((r) => {
+      if (!r.p) { prev = null; return `<div class="msg narr">${fmtT(r.t)}</div>`; }
+      const same = prev === r.p; prev = r.p;
+      const link = idx[O.slug(r.p)] ? `<a href="#/relations/fiche/${idx[O.slug(r.p)]}">${esc(r.p)}</a>` : esc(r.p);
+      return `<div class="msg${same ? " same" : ""}" style="--h:${hueOf(r.p)}">${same ? '<span class="av-gap"></span>' : av(r.p)}<div class="msg-b">${same ? "" : `<strong class="who">${link}</strong>`}<div class="msg-t">${fmtT(r.t)}</div></div></div>`;
+    }).join("");
+    const legend = cast.filter(Boolean).length > 1 ? `<ul class="cast" aria-label="Personnages">${cast.filter(Boolean).map((n) => `<li>${av(n)}<span>${esc(n)}</span></li>`).join("")}</ul>` : "";
+    return `<div class="chat">${legend}${body}</div>`;
+  }
   function scene(id) {
     const i = SCENES.findIndex((s) => s._s === id), s = SCENES[i];
     if (!s) return head("Role-play", "Scène introuvable") + empty('<a href="#/scenes">Retour aux scènes</a>');
-    const T = THEMES[s.theme] || THEMES.calme, th = THEMES[s.theme] ? s.theme : "calme", body = rich(s.texte, "reader story");
+    const T = THEMES[s.theme] || THEMES.calme, th = THEMES[s.theme] ? s.theme : "calme", body = rich(s.texte, "reader story") + chat(s);
     return `<p class="back reveal"><a href="#/scenes">← Toutes les scènes</a></p>
       <article class="scene" data-theme="${th}">
         <header class="scene-head reveal"><p class="sc-theme">${T.ic} ${esc(T.l)}</p><h1>${esc(s.titre)}</h1>

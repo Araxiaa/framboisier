@@ -4,6 +4,7 @@ window.Outils = (function () {
   // Mise en forme légère (anciens textes) : **gras**  *italique*  ==surligné==  ~~barré~~
   const fmt = (s) => esc(s)
     .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+    .replace(/__(.+?)__/g, "<u>$1</u>")
     .replace(/\*(.+?)\*/g, "<em>$1</em>")
     .replace(/==(.+?)==/g, "<mark>$1</mark>")
     .replace(/~~(.+?)~~/g, "<s>$1</s>")
