@@ -15,8 +15,8 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;1,9..144,400&family=Nunito:wght@400;600;700&display=swap" rel="stylesheet">
   <link rel="preload" as="image" href="assets/framboisier-tete.webp" fetchpriority="high">
-  <link rel="stylesheet" href="css/site.css?v=mw99aman">
-  <link rel="stylesheet" href="css/pages.css?v=mw99aman">
+  <link rel="stylesheet" href="css/site.css?v=mw9a4suw">
+  <link rel="stylesheet" href="css/pages.css?v=mw9a4suw">
   <script>try{var t=localStorage.getItem("fr-theme");if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
 </head>
 <body>
@@ -31,6 +31,7 @@
       <span>Étoile de Framboisier</span>
     </a>
     <nav id="menu" aria-label="Navigation principale"></nav>
+    <button class="icon-btn" id="search-btn" aria-label="Rechercher (touche /)" title="Rechercher ( / )"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M15.5 15.5 21 21" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg></button>
     <button class="icon-btn" id="theme" aria-label="Changer d'ambiance (jour / nuit étoilée)" title="Jour / Nuit étoilée">☾</button>
     <button class="icon-btn burger" id="burger" aria-label="Menu" aria-expanded="false" aria-controls="menu">☰</button>
   </header>
@@ -52,10 +53,16 @@
     <button class="lb-nav next" aria-label="Suivante">›</button>
   </div>
 
-  <script src="js/outils.js?v=mw99aman"></script>
-  <script src="js/config.js?v=mw99aman"></script>
-  <script src="js/content.js?v=mw99aman"></script>
+  <dialog id="search" aria-label="Rechercher dans le site">
+    <input type="search" id="search-q" placeholder="Un nom, un chapitre, une scène, un trait…" autocomplete="off" aria-label="Rechercher">
+    <ul id="search-list" role="listbox"></ul>
+    <p class="search-help"><kbd>↑</kbd> <kbd>↓</kbd> choisir · <kbd>Entrée</kbd> ouvrir · <kbd>Échap</kbd> fermer</p>
+  </dialog>
+
+  <script src="js/outils.js?v=mw9a4suw"></script>
+  <script src="js/config.js?v=mw9a4suw"></script>
+  <script src="js/content.js?v=mw9a4suw"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js" defer></script>
-  <script src="js/site.js?v=mw99aman" defer></script>
+  <script src="js/site.js?v=mw9a4suw" defer></script>
 </body>
 </html>

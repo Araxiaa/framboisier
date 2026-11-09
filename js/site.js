@@ -42,6 +42,8 @@
     SCENES = SCENES.map((s, i) => [s, i]).sort((a, b) => lu(a[0]) - lu(b[0]) || a[1] - b[1]).map((x) => x[0]); // chronologique : lune croissante, sans lune a la fin
     CHAPS = (D.histoire || []).map((c) => ({ ...c }));
     uniqSlugs(CHAPS, "titre", "chapitre").forEach((s, i) => (CHAPS[i]._s = s));
+    const vd = D.vies_dons || []; // les vies restantes se calculent à partir de la liste des neuf vies
+    if (vd.length) { D.identite.vies_max = vd.length; D.identite.vies = vd.length - vd.filter((v) => v.perdue === "oui").length; }
   }
   const enabled = (id) => ((D.reglages.sections || []).find((s) => s.id === id) || { actif: "oui" }).actif !== "non";
   const nameIndex = () => { const m = {}; RELS.forEach((r) => [r.nom, r.avant, ...(r.renoms || []).map((x) => x.nom)].filter(Boolean).forEach((n) => (m[O.slug(n)] = r._s))); return m; };
@@ -180,21 +182,32 @@
   function bindRegne() {
     $$("[data-rf]").forEach((b) => b.addEventListener("click", () => { $$("[data-rf]").forEach((x) => x.setAttribute("aria-pressed", x === b)); $$(".regne-list li").forEach((li) => (li.hidden = !!b.dataset.rf && li.dataset.rt !== b.dataset.rf)); }));
   }
+  const ROLES = { chef: "Meneur·se", lieutenant: "Lieutenant·e", guerisseur: "Guérisseur·se", autre: "Autre" };
+  const clanMembers = (c) => (c.membres && c.membres.length ? c.membres : c.chef ? [{ role: "chef", nom: c.chef, image: c.image || "" }] : []);
+  const clanAtt = (c) => { const a = [...(c.avis || [])].filter((x) => x.attitude).sort((x, y) => luneNum(x.lune) - luneNum(y.lune)).pop(); return a ? a.attitude : c.attitude; };
+  const attClass = (k) => (k === "mefiance" || k === "hostile" ? "neg" : k === "neutre" ? "neutre" : "pos");
+  const clanRoles = (r) => { const names = [r.nom, r.avant, ...(r.renoms || []).map((x) => x.nom)].filter(Boolean).map(O.slug), out = []; ((D.convictions || {}).autres_clans || []).forEach((c) => clanMembers(c).forEach((m) => { if (m.nom && names.includes(O.slug(m.nom))) out.push(`${(ROLES[m.role] || "Membre")} du ${c.nom}`); })); return out; };
   function clans() {
     const L = (D.convictions || {}).autres_clans || [];
     if (!L.length) return empty("Aucun clan renseigné.");
-    return `<p class="sec-sub reveal">Ce qu'il pense des autres clans, et de ceux qui les mènent.</p><div class="clans big">${L.map((c) => {
-      const A = ATT[c.attitude], src = O.safeSrc(c.image);
-      return `<article class="clan-card clan-big reveal"><div class="clan-head"><div class="avatar big" style="--h:${[...String(c.nom)].reduce((a, ch) => (a * 31 + ch.charCodeAt(0)) % 360, 7)}">${src ? `<img src="${esc(src)}" alt="" loading="lazy" decoding="async">` : esc(O.initials(c.nom))}</div>
-        <div><h3>${esc(c.nom)}</h3>${c.chef ? `<p class="rel">${esc(c.chef)}</p>` : ""}${A ? `<span class="app ${c.attitude === "mefiance" || c.attitude === "hostile" ? "neg" : c.attitude === "neutre" ? "neutre" : "pos"}">${A[0]} ${A[1]}</span>` : ""}</div></div>${rich(c.texte)}</article>`;
+    const idx = nameIndex();
+    const hue = (n) => [...String(n)].reduce((a, ch) => (a * 31 + ch.charCodeAt(0)) % 360, 7);
+    return `<p class="sec-sub reveal">Ce qu'il pense des autres clans et de ceux qui les mènent, et comment son avis a évolué au fil des lunes.</p><div class="clans big">${L.map((c) => {
+      const cur = clanAtt(c), A = ATT[cur], src = O.safeSrc(c.membres && c.membres.length ? c.image : ""), avis = [...(c.avis || [])].sort((x, y) => luneNum(x.lune) - luneNum(y.lune));
+      const members = clanMembers(c);
+      const member = (m) => { const rid = idx[O.slug(m.nom)], rel = RELS.find((r) => r._s === rid), pic = O.safeSrc(m.image) || (rel && O.safeSrc(rel.image)); return `<li>${rid ? `<a class="mem-chip" href="#/relations/fiche/${rid}">` : '<span class="mem-chip">'}<span class="avatar sm" style="--h:${hue(m.nom)}">${pic ? `<img src="${esc(pic)}" alt="" loading="lazy" decoding="async">` : esc(O.initials(m.nom))}</span><span><small>${esc(ROLES[m.role] || "Membre")}</small><strong>${esc(m.nom)}</strong></span>${rid ? "</a>" : "</span>"}</li>`; };
+      return `<article class="clan-card clan-big reveal"><div class="clan-head">${src ? `<div class="avatar big"><img src="${esc(src)}" alt="" loading="lazy" decoding="async"></div>` : `<div class="avatar big" style="--h:${hue(c.nom)}">${esc(O.initials(c.nom))}</div>`}
+        <div><h3>${esc(c.nom)}</h3>${A ? `<span class="app ${attClass(cur)}">${A[0]} ${A[1]}</span>` : ""}${avis.length ? `<div class="avis-trail mini" aria-hidden="true">${avis.filter((a) => a.attitude).map((a) => `<span class="app ${attClass(a.attitude)}" title="Lune ${esc(a.lune)} : ${esc((ATT[a.attitude] || [])[1] || "")}">${(ATT[a.attitude] || [""])[0]}</span>`).join("<i></i>")}</div>` : ""}</div></div>
+        ${members.length ? `<ul class="mem-chips">${members.map(member).join("")}</ul>` : ""}${rich(c.texte)}
+        ${avis.length ? `<details class="clan-evo"><summary>Évolution de son avis (${avis.length})</summary><ol class="avis-list">${avis.map((a) => `<li><span class="lune">${hasLune(a.lune) ? "Lune " + esc(a.lune) : "—"}</span><div class="avis-body"><p class="badges">${a.attitude ? `<span class="app ${attClass(a.attitude)}">${(ATT[a.attitude] || ["", ""])[0]} ${esc((ATT[a.attitude] || ["", ""])[1])}</span>` : ""}</p>${rich(a.texte)}</div></li>`).join("")}</ol></details>` : ""}</article>`;
     }).join("")}</div>`;
   }
   function vies() {
-    const I = D.identite, max = +I.vies_max || 9, left = +I.vies || 0, lostN = Math.max(0, max - left);
-    const L = [...(D.vies_perdues || [])].map((x, i) => [x, i]).sort((a, b) => luneNum(a[0].lune) - luneNum(b[0].lune) || a[1] - b[1]).map((x) => x[0]);
-    return `<div class="lives-big reveal"><div class="crown">${Array.from({ length: max }, (_, i) => star(i < left)).join("")}</div><p><strong>${left}</strong> vie${left > 1 ? "s" : ""} sur ${max} · ${lostN} perdue${lostN > 1 ? "s" : ""}</p></div>
-      ${L.length ? `<ol class="avis-list regne-list">${L.map((x, i) => `<li class="reveal ev"><span class="lune">${hasLune(x.lune) ? "Lune " + esc(x.lune) : "—"}</span><div class="avis-body"><p class="badges"><em class="dec">✦ Vie n°${i + 1} perdue</em></p>${rich(x.cause)}</div></li>`).join("")}</ol>` : empty("Aucune vie perdue n'est détaillée.")}
-      ${lostN > L.length ? `<p class="sec-sub reveal">${lostN - L.length} vie${lostN - L.length > 1 ? "s" : ""} perdue${lostN - L.length > 1 ? "s" : ""} non détaillée${lostN - L.length > 1 ? "s" : ""} pour l'instant.</p>` : ""}`;
+    const L = D.vies_dons || [], max = L.length || +D.identite.vies_max || 9, left = +D.identite.vies || 0, lostN = Math.max(0, max - left), idx = nameIndex();
+    const donor = (n) => (!n ? "" : idx[O.slug(n)] ? `<a href="#/relations/fiche/${idx[O.slug(n)]}">${esc(n)}</a>` : esc(n));
+    return `<p class="sec-sub reveal">Neuf vies offertes par ses ancêtres à la cérémonie du Clan des Étoiles : chacune avec son donneur et son don.</p>
+      <div class="lives-big reveal"><div class="crown">${Array.from({ length: max }, (_, i) => star(L.length ? !(L[i] && L[i].perdue === "oui") : i < left)).join("")}</div><p><strong>${left}</strong> vie${left > 1 ? "s" : ""} sur ${max} · ${lostN} perdue${lostN > 1 ? "s" : ""}</p></div>
+      ${L.length ? `<div class="vies-grid">${L.map((v, i) => { const lost = v.perdue === "oui"; return `<article class="vie ${lost ? "lost" : ""} reveal"><div class="vie-n">${star(!lost)}<b>Vie n°${i + 1}</b>${lost ? '<em class="dec">✦ Perdue</em>' : ""}</div><h3>${v.don ? esc(v.don) : '<span class="muted">Don non précisé</span>'}</h3>${v.donneur ? `<p class="rel">Offerte par ${donor(v.donneur)}</p>` : ""}${rich(v.texte)}${lost ? `<div class="vie-lost"><strong>${hasLune(v.lune_perdue) ? "Perdue à la lune " + esc(v.lune_perdue) : "Perdue"}</strong>${rich(v.cause)}</div>` : ""}</article>`; }).join("")}</div>` : empty("Aucune vie détaillée pour le moment.")}`;
   }
   function clan() {
     const v = D.convictions || {};
@@ -203,13 +216,45 @@
 
   /* ---------- histoire (chapitres = sous-pages) ---------- */
   function histoire(sub) {
-    if (!CHAPS.length) return head("Son parcours", "Histoire") + empty("Aucun chapitre pour le moment.");
+    const isF = sub === "frise";
     let i = CHAPS.findIndex((c) => c._s === sub); if (i < 0) i = 0;
+    const nav = `<nav class="subnav chaps reveal" aria-label="Chapitres">${CHAPS.map((x, j) => `<a href="#/histoire/${x._s}"${!isF && j === i ? ' class="on" aria-current="page"' : ""}><b>${j + 1}</b>${esc(x.titre)}</a>`).join("")}<a href="#/histoire/frise" class="frise-tab${isF ? " on" : ""}"${isF ? ' aria-current="page"' : ""}>🕰️ Frise des lunes</a></nav>`;
+    if (isF) return head("Son parcours", "Histoire") + nav + `<div class="sub-page">${frise()}</div>`;
+    if (!CHAPS.length) return head("Son parcours", "Histoire") + nav + empty("Aucun chapitre pour le moment.");
     const c = CHAPS[i];
-    return head("Son parcours", "Histoire") +
-      `<nav class="subnav chaps reveal" aria-label="Chapitres">${CHAPS.map((x, j) => `<a href="#/histoire/${x._s}"${j === i ? ' class="on" aria-current="page"' : ""}><b>${j + 1}</b>${esc(x.titre)}</a>`).join("")}</nav>
-      <article class="chapter sub-page"><p class="period">Chapitre ${i + 1}${c.periode ? " · " + esc(c.periode) : ""}</p><h2>${esc(c.titre)}</h2>${rich(c.paragraphes, "reader story")}</article>` +
+    return head("Son parcours", "Histoire") + nav +
+      `<article class="chapter sub-page"><p class="period">Chapitre ${i + 1}${c.periode ? " · " + esc(c.periode) : ""}</p><h2>${esc(c.titre)}</h2>${rich(c.paragraphes, "reader story")}</article>` +
       pager(CHAPS[i - 1] && ["#/histoire/" + CHAPS[i - 1]._s, CHAPS[i - 1].titre], CHAPS[i + 1] && ["#/histoire/" + CHAPS[i + 1]._s, CHAPS[i + 1].titre]);
+  }
+  // Frise des lunes : tout ce qui est daté sur le site, rassemblé automatiquement.
+  const FK = { meneur: ["⚖️", "Règne"], sante: ["🩹", "Santé"], vies: ["✦", "Vies"], relations: ["🍓", "Relations"], clans: ["🏕️", "Clans"], scenes: ["✎", "Scènes"], noms: ["🏷️", "Noms"] };
+  function frise() {
+    const ev = []; let und = 0;
+    const add = (l, k, ic, txt, href) => { const n = luneNum(l); if (hasLune(l) && n < 1e9) ev.push({ n, k, ic, txt, href }); else und++; };
+    (D.regne || []).forEach((x) => add(x.lune, "meneur", (REGNE[x.type] || REGNE.autre)[0], x.titre, "#/meneur/regne"));
+    (D.sante || []).forEach((x) => { add(x.lune_debut, "sante", (SANTE[x.type] || SANTE.autre)[0], x.titre, "#/personnage/sante"); if (x.en_cours !== "oui" && hasLune(x.lune_fin) && String(x.lune_fin) !== String(x.lune_debut)) add(x.lune_fin, "sante", "💚", "Fin : " + x.titre, "#/personnage/sante"); });
+    (D.vies_dons || []).forEach((v, i) => { if (v.perdue === "oui") add(v.lune_perdue, "vies", "✦", `Vie n°${i + 1} perdue${v.don ? " (" + v.don + ")" : ""}`, "#/meneur/vies"); });
+    (D.noms || []).forEach((n) => add(n.lune, "noms", "🏷️", "Devient " + n.nom, "#/personnage/noms"));
+    RELS.forEach((r) => {
+      const h = "#/relations/fiche/" + r._s;
+      (r.avis || []).forEach((a) => { if (a.etat) add(a.lune, "relations", a.etat === "mort" ? "✦" : a.etat === "disparu" ? "?" : "↩", `${r.nom} : ${O.ETAT[a.etat]}`, h); else if (a.appreciation) add(a.lune, "relations", O.APP[a.appreciation].glyph, `Avis sur ${r.nom} : ${O.APP[a.appreciation].label}`, h); });
+      (r.renoms || []).forEach((x) => add(x.lune, "relations", "🏷️", `${r.avant || r.nom} devient ${x.nom}`, h));
+    });
+    ((D.convictions || {}).autres_clans || []).forEach((c) => (c.avis || []).forEach((a) => add(a.lune, "clans", (ATT[a.attitude] || ["🏕️"])[0], `Avis sur le ${c.nom} : ${(ATT[a.attitude] || ["", "—"])[1]}`, "#/meneur/clans")));
+    SCENES.forEach((s) => add(s.lune, "scenes", "✎", "Scène : " + s.titre, "#/scenes"));
+    if (!ev.length) return empty("Rien de daté pour le moment : la frise se remplit toute seule avec les lunes que tu notes (règne, santé, avis, scènes…).");
+    ev.sort((a, b) => a.n - b.n);
+    const lunes = unique(ev.map((e) => e.n)), kinds = unique(ev.map((e) => e.k));
+    return `<p class="sec-sub reveal">Tout ce qui est daté sur le site, rangé par lune : règne, santé, vies, avis, scènes… Elle se remplit toute seule.</p>
+      <div class="tabs reveal" role="group" aria-label="Filtrer la frise"><button data-fk="" aria-pressed="true">Tout</button>${kinds.map((k) => `<button data-fk="${k}" aria-pressed="false">${FK[k][0]} ${FK[k][1]}</button>`).join("")}</div>
+      <ol class="frise">${lunes.map((n) => `<li class="fl reveal" data-n="${n}"><span class="fl-n"><small>Lune</small>${n}</span><ul>${ev.filter((e) => e.n === n).map((e) => `<li data-k="${e.k}"><span class="fk">${e.ic}</span><a href="${e.href}">${esc(e.txt)}</a></li>`).join("")}</ul></li>`).join("")}</ol>
+      ${und ? `<p class="sec-sub">${und} élément${und > 1 ? "s" : ""} sans lune ${und > 1 ? "ne sont" : "n'est"} pas affiché${und > 1 ? "s" : ""} ici.</p>` : ""}`;
+  }
+  function bindFrise() {
+    $$("[data-fk]").forEach((b) => b.addEventListener("click", () => {
+      $$("[data-fk]").forEach((x) => x.setAttribute("aria-pressed", x === b));
+      $$(".frise .fl").forEach((g) => { let n = 0; $$("li[data-k]", g).forEach((e) => { const ok = !b.dataset.fk || e.dataset.k === b.dataset.fk; e.hidden = !ok; if (ok) n++; }); g.hidden = !n; });
+    }));
   }
 
   /* ---------- relations ---------- */
@@ -287,7 +332,7 @@
     return `<p class="back reveal"><a href="#/relations/${r._k}">← ${r._k === "famille" ? "Famille" : "Relations diverses"}</a> · <a href="#/relations/carte">Carte des relations</a></p>
       <article class="rel-page">
         <header class="rel-head reveal">${avatar(r, true)}<div><p class="kicker">${esc(r.lien)}</p><h1>${esc(r.nom)}</h1>
-          <div class="chips">${r.groupe ? `<span class="chip">${esc(r.groupe)}</span>` : ""}${r.rang ? `<span class="chip">${esc(r.rang)}</span>` : ""}<span class="chip ${r.joueur === "PJ" ? "mauve" : ""}">${esc(r.joueur || "PNJ")}${r.joueur === "PJ" && r.pseudo ? " · " + esc(r.pseudo) : ""}</span></div>
+          <div class="chips">${clanRoles(r).map((x) => `<span class="chip mauve">${esc(x)}</span>`).join("")}${r.groupe ? `<span class="chip">${esc(r.groupe)}</span>` : ""}${r.rang ? `<span class="chip">${esc(r.rang)}</span>` : ""}<span class="chip ${r.joueur === "PJ" ? "mauve" : ""}">${esc(r.joueur || "PNJ")}${r.joueur === "PJ" && r.pseudo ? " · " + esc(r.pseudo) : ""}</span></div>
           <p class="badges big">${stBadge(st)}${cur ? `<span class="app ${O.APP[cur.appreciation].g}">${O.APP[cur.appreciation].glyph} ${esc(O.APP[cur.appreciation].label)}</span>` : ""}${cur && cur.respect === "oui" ? '<em class="resp">Respect</em>' : ""}${cur && cur.mitige === "oui" ? '<em class="mit">Mitigé</em>' : ""}</p></div></header>
         ${ren.length ? `<section class="renoms reveal"><h2 class="sub">Changements de nom</h2><ol><li>${r.avant ? `<s>${esc(r.avant)}</s> <small>à l'origine</small>` : ""}</li>${ren.map((x, j) => `<li>${j < ren.length - 1 ? `<s>${esc(x.nom)}</s>` : `<strong>${esc(x.nom)}</strong>`} <small>depuis la lune ${esc(x.lune)}${x.note ? " · " + esc(x.note) : ""}</small></li>`).join("")}</ol></section>` : ""}
         ${O.plain(r.notes) ? `<section class="reveal">${rich(r.notes, "reader")}</section>` : ""}
@@ -362,7 +407,7 @@
     document.title = (title ? title + " — " : "") + (D.reglages.titre_page || "Étoile de Framboisier");
     $$("#menu a").forEach((a) => { const on = a.dataset.id === nav; a.classList.toggle("on", on); if (on) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current"); });
     document.body.classList.remove("menu-open"); $("#burger").setAttribute("aria-expanded", "false");
-    scrollTo(0, 0); bind(); bindCarte(); bindScenes(); bindSante(); bindRegne();
+    scrollTo({ top: 0, left: 0, behavior: "instant" }); bind(); bindCarte(); bindScenes(); bindSante(); bindRegne(); bindFrise(); app.setAttribute("tabindex", "-1"); app.focus({ preventScroll: true });
   }
   function render() {
     const R = D.reglages, root = document.documentElement.style;
@@ -436,14 +481,65 @@
     document.onvisibilitychange = () => { cancelAnimationFrame(raf); if (!document.hidden) draw(); };
   }
 
+
+  /* ---------- recherche (touche / ou Ctrl+K) ---------- */
+  let IDX = [];
+  function buildIndex() {
+    IDX = []; const P = (v) => O.plain(v);
+    const add = (k, tt, s, h, txt) => IDX.push({ k, t: tt, s: s || "", h, q: O.norm([tt, s, txt].join(" ")) });
+    if (enabled("personnage")) {
+      PERSO.forEach(([id, l]) => add("Page", l, "Personnage", "#/personnage/" + id, ""));
+      const c = D.caractere || {}, g = D.gouts || {}, ph = D.physique || {};
+      [...(c.qualites || []), ...(c.defauts || [])].forEach((x) => add("Trait", x.titre, "Caractère", "#/personnage/caractere", P(x.texte)));
+      [...(g.aime || []), ...(g.deteste || []), ...(g.peurs || []), ...(g.habitudes || [])].forEach((x) => add("Goût", x.titre, "Goûts & peurs", "#/personnage/gouts", P(x.texte)));
+      [...(ph.forts || []), ...(ph.faibles || [])].forEach((x) => add("Physique", x.titre, "Physique", "#/personnage/physique", P(x.texte)));
+      (D.noms || []).forEach((n) => add("Nom", n.nom, n.etape, "#/personnage/noms", P(n.texte)));
+      (D.sante || []).forEach((x) => add("Santé", x.titre, "Carnet de santé", "#/personnage/sante", P(x.cause) + " " + P(x.soins) + " " + P(x.marque_texte)));
+    }
+    if (enabled("histoire")) { CHAPS.forEach((c) => add("Chapitre", c.titre, c.periode, "#/histoire/" + c._s, P(c.paragraphes))); add("Page", "Frise des lunes", "Histoire", "#/histoire/frise", "chronologie"); }
+    if (enabled("meneur")) {
+      MEN.forEach(([id, l]) => add("Page", l, "Meneur", "#/meneur/" + id, ""));
+      (D.regne || []).forEach((x) => add("Règne", x.titre, hasLune(x.lune) ? "Lune " + x.lune : "", "#/meneur/regne", P(x.texte)));
+      ((D.convictions || {}).autres_clans || []).forEach((c) => add("Clan", c.nom, clanMembers(c).map((m) => m.nom).join(", "), "#/meneur/clans", P(c.texte) + " " + clanMembers(c).map((m) => m.nom).join(" ")));
+      (D.vies_dons || []).forEach((v, i) => add("Vie", `Vie n°${i + 1}${v.don ? " — " + v.don : ""}`, v.donneur ? "Offerte par " + v.donneur : "", "#/meneur/vies", P(v.texte) + " " + P(v.cause)));
+    }
+    if (enabled("relations")) RELS.forEach((r) => add("Fiche", r.nom, [r.lien, r.groupe].filter(Boolean).join(" · "), "#/relations/fiche/" + r._s, [r.avant, ...(r.renoms || []).map((x) => x.nom), P(r.notes), ...(r.avis || []).map((a) => P(a.texte))].join(" ")));
+    if (enabled("scenes")) SCENES.forEach((s) => add("Scène", s.titre, hasLune(s.lune) ? "Lune " + s.lune : "", "#/scenes", (s.description || "") + " " + (s.participants || []).join(" ")));
+    (D.libres || []).forEach((l, i) => add("Page", l.titre, "", "#/page/" + libreSlugs()[i], P(l.paragraphes)));
+    if (enabled("galerie")) (D.galerie || []).forEach((x) => add("Image", x.titre, "Galerie", "#/galerie", x.description || ""));
+  }
+  const sdlg = $("#search"), sq = $("#search-q"), slist = $("#search-list");
+  let sel = 0, sres = [];
+  function runSearch() {
+    const toks = O.norm(sq.value).split(/\s+/).filter(Boolean);
+    sres = !toks.length ? IDX.filter((x) => x.k === "Page").slice(0, 12) : IDX.filter((x) => toks.every((t) => x.q.includes(t))).sort((a, b) => toks.filter((t) => O.norm(b.t).includes(t)).length - toks.filter((t) => O.norm(a.t).includes(t)).length).slice(0, 30);
+    sel = 0; paintSearch();
+  }
+  function paintSearch() {
+    slist.innerHTML = sres.length ? sres.map((x, i) => `<li role="option" aria-selected="${i === sel}" data-i="${i}"><span class="sk">${esc(x.k)}</span><span class="st"><strong>${esc(x.t)}</strong>${x.s ? `<small>${esc(x.s)}</small>` : ""}</span></li>`).join("") : '<li class="none">Rien trouvé.</li>';
+    const a = $('[aria-selected="true"]', slist); if (a) a.scrollIntoView({ block: "nearest" });
+  }
+  const goSearch = (i) => { const x = sres[i]; if (!x) return; sdlg.close(); location.hash = x.h; };
+  function openSearch() { if (!sdlg.open) { buildIndex(); sq.value = ""; runSearch(); sdlg.showModal(); sq.focus(); } }
+  sq.addEventListener("input", runSearch);
+  sq.addEventListener("keydown", (e) => { if (e.key === "ArrowDown") { e.preventDefault(); sel = Math.min(sres.length - 1, sel + 1); paintSearch(); } else if (e.key === "ArrowUp") { e.preventDefault(); sel = Math.max(0, sel - 1); paintSearch(); } else if (e.key === "Enter") { e.preventDefault(); goSearch(sel); } });
+  slist.addEventListener("click", (e) => { const li = e.target.closest("li[data-i]"); if (li) goSearch(+li.dataset.i); });
+  sdlg.addEventListener("click", (e) => { if (e.target === sdlg) sdlg.close(); });
+  $("#search-btn").onclick = openSearch;
+  addEventListener("keydown", (e) => { const typing = /^(INPUT|TEXTAREA|SELECT)$/.test((e.target.tagName || "")) || e.target.isContentEditable; if ((e.key === "/" && !typing) || ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k")) { e.preventDefault(); openSearch(); } });
+
   /* ---------- démarrage ---------- */
   const c0 = cached();
-  if (c0) D = O.load(c0);
-  render();
-  remote().then((r) => {
+  const rem = remote();
+  const apply = (r) => {
     if (!r) return;
     const next = O.load(r);
     try { localStorage.setItem(CACHE, JSON.stringify(r)); } catch (e) {}
-    if (JSON.stringify(next) !== JSON.stringify(D)) { D = next; const y = scrollY; render(); scrollTo(0, y); }
+    if (JSON.stringify(next) !== JSON.stringify(D)) { D = next; const y = scrollY; render(); scrollTo({ top: y, behavior: "instant" }); }
+  };
+  if (c0) { D = O.load(c0); render(); rem.then(apply); }
+  else Promise.race([rem, new Promise((res) => setTimeout(() => res(undefined), 1500))]).then((r) => { // 1re visite : on attend la base un instant plutôt que d'afficher le contenu par défaut
+    if (r) { try { localStorage.setItem(CACHE, JSON.stringify(r)); } catch (e) {} D = O.load(r); }
+    render(); if (r === undefined) rem.then(apply);
   });
 })();

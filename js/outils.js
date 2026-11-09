@@ -31,6 +31,8 @@ window.Outils = (function () {
     if (!have.some((s) => s.id === "personnage")) have = def.map((d) => ({ ...d, actif: (have.find((s) => s.id === d.id) || d).actif })); // ancienne structure → ordre par défaut
     def.forEach((d, i) => { if (!have.some((s) => s.id === d.id)) { const prev = def[i - 1], at = prev ? have.findIndex((s) => s.id === prev.id) : -1; have.splice(at + 1, 0, { ...d }); } }); // page apparue depuis : insérée à sa place par défaut
     c.reglages.sections = have;
+    const cl = c.convictions && c.convictions.autres_clans; // anciens clans : « chef » + image  →  liste de membres
+    if (Array.isArray(cl)) cl.forEach((x) => { if (!Array.isArray(x.membres)) { x.membres = x.chef ? [{ role: "chef", nom: x.chef, image: x.image || "" }] : []; if (x.chef) x.image = ""; } if (!Array.isArray(x.avis)) x.avis = []; });
     return c;
   }
 

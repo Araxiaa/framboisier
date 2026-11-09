@@ -92,13 +92,27 @@
         F.row([F.num("lune", "Lune"), F.sel("type", "Type", [["decision", "⚖️ Décision"], ["diplomatie", "🤝 Diplomatie"], ["ceremonie", "✨ Cérémonie"], ["crise", "⚠️ Crise"], ["clan", "🏕️ Vie du clan"], ["autre", "✦ Autre"]])]),
         R("texte", "Ce qui s'est passé"),
       ], { sum: (it) => ({ title: it.titre || "(sans titre)", sub: (it.lune !== "" && it.lune != null ? "lune " + it.lune : "") }), sortBy: (it) => numLune(it.lune), addLabel: "+ Ajouter un événement", blank: () => ({ titre: "", lune: lunesNow(), type: "decision", texte: "" }) })] },
-      { id: "clans", ic: "🏕️", label: "Les autres clans", help: "Son avis sur chaque clan, avec la tête de son chef (image recadrable) et son attitude.", defs: [F.items("convictions.autres_clans", "Clans", [
-        F.row([F.text("nom", "Clan"), F.text("chef", "Chef du clan")]),
-        F.sel("attitude", "Attitude de Framboisier", [["allie", "🤝 Allié"], ["sympathie", "🍓 Sympathie"], ["neutre", "☁️ Neutre"], ["mefiance", "🐛 Méfiance"], ["hostile", "⚔️ Hostile"]]),
-        F.img("image", "Tête du chef (ou emblème du clan)", { crop: true }),
-        R("texte", "Son avis"),
-      ], { sum: (it) => ({ title: it.nom || "—", sub: it.chef || "", thumb: it.image }), addLabel: "+ Ajouter un clan", blank: () => ({ nom: "", chef: "", image: "", attitude: "neutre", texte: "" }) })] },
-      { id: "vies", ic: "✦", label: "Les neuf vies", help: "Combien de vies lui restent, et lesquelles ont été perdues (lune et cause).", defs: [F.group("identite", "", [F.row([F.num("vies", "Vies restantes"), F.num("vies_max", "Vies au total")])], { bare: true }), F.items("vies_perdues", "Vies perdues", [F.num("lune", "À la lune"), R("cause", "Comment ?")], { sum: (it) => ({ title: "Vie perdue" + (it.lune !== "" && it.lune != null ? " — lune " + it.lune : ""), sub: O.plain(it.cause).slice(0, 80) }), sortBy: (it) => numLune(it.lune), addLabel: "+ Ajouter une vie perdue", blank: () => ({ lune: lunesNow(), cause: "" }) })] },
+      { id: "clans", ic: "🏕️", label: "Les autres clans", help: "Pour chaque clan : son chef, son lieutenant, son guérisseur (reliés aux fiches si le nom correspond), son avis, et l'évolution de cet avis lune après lune.", defs: [F.items("convictions.autres_clans", "Clans", [
+        F.text("nom", "Clan"),
+        F.img("image", "Emblème ou image du clan (optionnelle)", { crop: true }),
+        F.items("membres", "Chef, lieutenant, guérisseur…", [
+          F.row([F.sel("role", "Rôle", [["chef", "Meneur·se"], ["lieutenant", "Lieutenant·e"], ["guerisseur", "Guérisseur·se"], ["autre", "Autre"]]), F.text("nom", "Nom", { list: names, hint: "S'il correspond à une fiche, le nom devient un lien et la photo est reprise." })]),
+          F.img("image", "Tête (optionnelle : sinon celle de la fiche)", { crop: true }),
+        ], { sum: (it) => ({ title: it.nom || "(sans nom)", sub: ({ chef: "Meneur·se", lieutenant: "Lieutenant·e", guerisseur: "Guérisseur·se", autre: "Autre" })[it.role] || "", thumb: it.image }), addLabel: "+ Ajouter un membre", blank: () => ({ role: "chef", nom: "", image: "" }) }),
+        F.sel("attitude", "Attitude de départ", [["allie", "🤝 Allié"], ["sympathie", "🍓 Sympathie"], ["neutre", "☁️ Neutre"], ["mefiance", "🐛 Méfiance"], ["hostile", "⚔️ Hostile"]], { hint: "Utilisée tant qu'aucun avis daté n'est ajouté ci-dessous." }),
+        R("texte", "Présentation / avis général"),
+        F.items("avis", "Évolution de son avis", [
+          F.row([F.num("lune", "À la lune"), F.sel("attitude", "Attitude", [["allie", "🤝 Allié"], ["sympathie", "🍓 Sympathie"], ["neutre", "☁️ Neutre"], ["mefiance", "🐛 Méfiance"], ["hostile", "⚔️ Hostile"]])]),
+          R("texte", "Ce qui s'est passé / pourquoi son avis change"),
+        ], { sum: (it) => ({ title: "Lune " + (it.lune === "" || it.lune == null ? "?" : it.lune), sub: ({ allie: "Allié", sympathie: "Sympathie", neutre: "Neutre", mefiance: "Méfiance", hostile: "Hostile" })[it.attitude] || "" }), sortBy: (it) => numLune(it.lune), addLabel: "+ Ajouter un avis", blank: () => ({ lune: lunesNow(), attitude: "neutre", texte: "" }) }),
+      ], { sum: (it) => ({ title: it.nom || "—", sub: ((it.membres || []).find((m) => m.role === "chef") || {}).nom || "", thumb: it.image }), addLabel: "+ Ajouter un clan", blank: () => ({ nom: "", image: "", membres: [], attitude: "neutre", avis: [], texte: "" }) })] },
+      { id: "vies", ic: "✦", label: "Les neuf vies", help: "Pour chacune de ses vies : qui la lui a donnée, et le don. Coche « perdue » quand il la perd (lune et cause) : les vies restantes se calculent toutes seules.", defs: [F.items("vies_dons", "Ses vies", [
+        F.row([F.text("donneur", "Qui la lui a donnée", { list: names }), F.text("don", "Le don", { ph: "Le courage, la patience…" })]),
+        R("texte", "Précisions (les mots prononcés, le contexte…)"),
+        F.yes("perdue", "Cette vie est perdue", { def: "non" }),
+        F.num("lune_perdue", "Perdue à la lune"),
+        R("cause", "Comment l'a-t-il perdue ?"),
+      ], { sum: (it, i) => ({ title: "Vie n°" + (i + 1) + (it.don ? " — " + it.don : ""), sub: it.donneur ? "offerte par " + it.donneur : "", badges: it.perdue === "oui" ? ["perdue"] : [] }), addLabel: "+ Ajouter une vie", blank: () => ({ donneur: "", don: "", texte: "", perdue: "non", lune_perdue: "", cause: "" }) })] },
       { id: "clan", ic: "🏕️", label: "Son clan & sa foi", help: "Son rapport au Clan du Tonnerre et sa croyance dans le Clan des Étoiles.", defs: [R("convictions.clan", "Relation au clan"), R("convictions.etoiles", "Croyance (Clan des Étoiles)")] },
     ] },
     { g: "Histoire", list: [
@@ -294,7 +308,7 @@
     if (f.sortBy && arr.length > 1) { const sb2 = el("button", "mini sortbtn", "↕ Trier par lune (chronologique)"); sb2.type = "button"; sb2.onclick = () => { const s = arr.map((x, i) => [x, i]).sort((a, b) => f.sortBy(a[0]) - f.sortBy(b[0]) || a[1] - b[1]).map((x) => x[0]); arr.splice(0, arr.length, ...s); open.clear(); touch(); redraw(); toast("Trié par lune ✓"); }; box.append(sb2); }
     if (f.search && arr.length > 6) { const s = el("input"); s.type = "search"; s.placeholder = "Filtrer…"; s.className = "filter"; s.oninput = () => box.querySelectorAll(":scope > details.item").forEach((d) => (d.hidden = !O.norm(d.dataset.t).includes(O.norm(s.value)))); box.append(s); }
     arr.forEach((it, i) => {
-      const d = el("details", "item"), k = key + "." + i, s = () => f.sum(it);
+      const d = el("details", "item"), k = key + "." + i, s = () => f.sum(it, i);
       const sm = el("summary"), paint = () => { const v = s(); d.dataset.t = v.title + " " + (v.sub || ""); sm.innerHTML = `${v.thumb && O.safeSrc(v.thumb) ? `<img class="mini-thumb" src="${esc(O.safeSrc(v.thumb))}" alt="">` : `<span class="num">${i + 1}</span>`}<span class="t"><b>${esc(v.title)}</b>${v.sub ? `<small>${esc(v.sub)}</small>` : ""}</span>${(v.badges || []).map((b) => `<span class="tag">${esc(b)}</span>`).join("")}`; };
       paint(); d.append(sm);
       const body = el("div", "item-body"); let built = false;
@@ -323,7 +337,7 @@
   function overview(host) {
     const n = (k) => (O.get(state, k) || []).length, I = state.identite;
     const stats = [["Chapitres", n("histoire")], ["Fiches de relations", n("famille") + n("relations")], ["Scènes RP", n("scenes")], ["Images", n("galerie")], ["Pages libres", n("libres")]];
-    host.innerHTML = `<div class="ov"><div class="ov-hero">${O.safeSrc(I.image) ? `<img src="${esc(O.safeSrc(I.image))}" alt="">` : ""}<div><h2>${esc(I.nom)}</h2><p>${esc(I.sous_titre)} · ${esc(I.lunes)} lunes · ${esc(I.vies)}/${esc(I.vies_max)} vies</p><a class="btn primary" href="index.html" target="_blank" rel="noopener">Voir le site ↗</a></div></div>
+    host.innerHTML = `<div class="ov"><div class="ov-hero">${O.safeSrc(I.image) ? `<img src="${esc(O.safeSrc(I.image))}" alt="">` : ""}<div><h2>${esc(I.nom)}</h2><p>${esc(I.sous_titre)} · ${esc(I.lunes)} lunes · ${((state.vies_dons || []).length ? (state.vies_dons.length - state.vies_dons.filter((v) => v.perdue === "oui").length) : esc(I.vies))}/${(state.vies_dons || []).length || esc(I.vies_max)} vies</p><a class="btn primary" href="index.html" target="_blank" rel="noopener">Voir le site ↗</a></div></div>
       <div class="ov-stats">${stats.map(([l, v]) => `<div><strong>${v}</strong><span>${l}</span></div>`).join("")}</div>
       <div class="ov-tips"><h3>Comment ça marche</h3><ul><li>Choisis une rubrique à gauche, modifie, puis <b>Enregistrer</b> (ou <kbd>Ctrl</kbd>+<kbd>S</kbd>) : le site se met à jour tout de suite.</li><li><b>Éditeur de texte</b> : barre d'outils au-dessus de chaque texte (gras, titres, citations, couleurs, séparateurs, images…). <kbd>Entrée</kbd> = nouveau paragraphe, <kbd>Maj</kbd>+<kbd>Entrée</kbd> = saut de ligne. Le bouton ⛶ passe en plein écran pour écrire confortablement.</li><li><b>Relations</b> : ouvre une fiche, ajoute des <i>avis</i> à telle lune (appréciation, respect, mitigé, décès, disparition) et des changements de nom.</li><li><b>Scènes RP</b> : colle le texte du fil dans l'éditeur, choisis l'ambiance (le fond de la page change) et le lien Discord.</li><li>Un brouillon est gardé automatiquement dans ce navigateur. <b>⋯ → Exporter</b> télécharge une sauvegarde complète.</li></ul></div></div>`;
   }
