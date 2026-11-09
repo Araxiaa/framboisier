@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Étoile de Framboisier — Meneur du Clan du Tonnerre</title>
+  <meta name="description" content="Étoile de Framboisier, jeune meneur du Clan du Tonnerre : portrait, caractère, physique, famille et histoire.">
+  <meta name="theme-color" content="#fff6e6">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Étoile de Framboisier — Meneur du Clan du Tonnerre">
+  <meta property="og:description" content="Un jeune meneur doux, rêveur et un peu hautain, choisi par le Clan des Étoiles à 15 lunes.">
+  <meta property="og:locale" content="fr_FR">
+  <link rel="icon" href="assets/favicon.png" type="image/png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;1,9..144,400&family=Nunito:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="preload" as="image" href="assets/framboisier-tete.webp" fetchpriority="high">
+  <link rel="stylesheet" href="css/site.css?v=mw8iksll">
+  <script>try{var t=localStorage.getItem("fr-theme");if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
+</head>
+<body>
+  <a class="skip" href="#app">Aller au contenu</a>
+  <div class="progress" id="progress" aria-hidden="true"></div>
+  <div class="sky" aria-hidden="true"><i></i><i></i><i></i></div>
+  <canvas id="fx" aria-hidden="true"></canvas>
+
+  <header class="nav" id="nav">
+    <a class="brand" href="#accueil" aria-label="Étoile de Framboisier, accueil">
+      <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M12 2l2.6 6.2 6.7.6-5.1 4.4 1.6 6.6L12 16.4l-5.8 3.4 1.6-6.6L2.700 8.800l6.700-.6z" fill="currentColor"/></svg>
+      <span>Étoile de Framboisier</span>
+    </a>
+    <nav id="menu" aria-label="Navigation principale"></nav>
+    <button class="icon-btn" id="theme" aria-label="Changer d'ambiance (jour / nuit étoilée)" title="Jour / Nuit étoilée">☾</button>
+    <button class="icon-btn burger" id="burger" aria-label="Menu" aria-expanded="false" aria-controls="menu">☰</button>
+  </header>
+
+  <main id="app" aria-live="polite"><p class="loading">Étoile de Framboisier rêvasse… un instant.</p></main>
+
+  <footer>
+    <p class="foot-title">Étoile de Framboisier</p>
+    <p><span id="foot-text">Personnage créé par</span> <span id="credits">.Araxia.</span> · Clan du Tonnerre</p>
+    <p><a href="admin.html" class="admin-link">Espace admin</a></p>
+  </footer>
+
+  <button class="up" id="up" aria-label="Remonter en haut de la page">↑</button>
+
+  <div id="lightbox" class="lightbox" hidden role="dialog" aria-modal="true" aria-label="Image agrandie">
+    <button class="lb-close" aria-label="Fermer">✕</button>
+    <button class="lb-nav prev" aria-label="Précédente">‹</button>
+    <figure><img alt=""><figcaption></figcaption></figure>
+    <button class="lb-nav next" aria-label="Suivante">›</button>
+  </div>
+
+  <script src="js/outils.js?v=mw8iksll"></script>
+  <script src="js/config.js?v=mw8iksll"></script>
+  <script src="js/content.js?v=mw8iksll"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js" defer></script>
+  <script src="js/site.js?v=mw8iksll" defer></script>
+</body>
+</html>
