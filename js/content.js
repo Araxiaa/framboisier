@@ -17,6 +17,8 @@ window.DEFAULT_CONTENT = {
     sexe: "Mâle",
     orientation: "Hétéro",
     pv: 60,
+    pv_max: 60,
+    pv_note: "Maximum absolu : 50 pour un chat ordinaire, 60 pour un meneur.",
     pa: 6,
     vies: 8,
     vies_max: 9,

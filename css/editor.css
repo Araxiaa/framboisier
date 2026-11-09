@@ -29,19 +29,6 @@
 .tg { display: inline-flex; align-items: center; gap: .3rem; padding: .15rem .35rem .15rem .75rem; border-radius: 999px; background: rgba(154, 98, 168, .16); font-size: .9rem; font-weight: 600; }
 .tg button { border: 0; background: none; cursor: pointer; color: var(--muted); border-radius: 50%; width: 1.3rem; height: 1.3rem; } .tg button:hover { background: rgba(0, 0, 0, .1); }
 
-.dlg { border: 1px solid var(--line); border-radius: 14px; background: var(--paper); padding: .8rem; display: grid; gap: .7rem; }
-.dlg-tools { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; } .dlg-count { margin-left: auto; font-size: .85rem; color: var(--muted); font-weight: 700; }
-.dlg-import { display: grid; gap: .5rem; padding: .8rem; border-radius: 12px; background: #fbefdc; } .dlg-import[hidden] { display: none; }
-.dlg-import textarea { width: 100%; padding: .6rem .75rem; border: 1px solid var(--line); border-radius: 10px; background: var(--paper); resize: vertical; font: inherit; }
-.dlg-import-bar { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; } .dlg-import-bar select { padding: .4rem .6rem; border: 1px solid var(--line); border-radius: 10px; background: var(--paper); }
-.dlg-list { display: grid; gap: .4rem; max-height: 75vh; overflow-y: auto; padding-right: .2rem; }
-.dlg-row { display: grid; grid-template-columns: 10.5rem 1fr auto; gap: .5rem; align-items: start; padding: .4rem; border-radius: 10px; border: 1px solid transparent; } .dlg-row:hover { border-color: var(--line); background: #fffaf1; }
-.dlg-row select { width: 100%; padding: .5rem .5rem; border: 1px solid var(--line); border-radius: 10px; background: var(--paper); font-weight: 700; color: var(--ink); min-width: 0; }
-.dlg-row textarea { width: 100%; padding: .5rem .7rem; border: 1px solid var(--line); border-radius: 10px; background: var(--paper); resize: none; overflow: hidden; line-height: 1.5; font: inherit; }
-.dlg-row textarea:focus, .dlg-row select:focus { border-color: var(--apricot); outline: 3px solid rgba(242, 166, 90, .3); }
-.dlg-row.narr textarea { font-style: italic; background: #f6f0e6; } .dlg-btns { display: flex; gap: .2rem; }
-.empty-dlg { color: var(--muted); font-size: .92rem; margin: .3rem 0; }
-@media (max-width: 700px) { .dlg-row { grid-template-columns: 1fr auto; } .dlg-row select { grid-column: 1 / -1; } }
 
 .crop-ov { position: fixed; inset: 0; z-index: 100; background: rgba(40, 24, 14, .6); display: grid; place-items: center; padding: 1rem; }
 .crop-box { background: var(--paper); border-radius: 22px; padding: 1.2rem 1.4rem 1.4rem; max-width: 26rem; width: 100%; display: grid; gap: .8rem; justify-items: center; box-shadow: 0 30px 60px -20px #000; }

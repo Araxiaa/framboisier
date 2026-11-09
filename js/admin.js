@@ -19,7 +19,6 @@
     img: (k, label, o) => ({ t: "img", k, label, ...o }),
     color: (k, label, o) => ({ t: "color", k, label, ...o }),
     tags: (k, label, o) => ({ t: "tags", k, label, ...o }),
-    dialog: (k, label, o) => ({ t: "dialog", k, label, ...o }),
     strs: (k, label, o) => ({ t: "strs", k, label, ...o }),
     group: (k, title, fields, o) => ({ t: "group", k, title, fields, ...o }),
     row: (fields) => ({ t: "group", k: "", title: "", fields, cols: true }),
@@ -32,65 +31,6 @@
   const clans = () => [...new Set([...(state.famille || []), ...(state.relations || [])].map((m) => m.groupe).filter(Boolean))];
   const names = () => [...(state.famille || []), ...(state.relations || [])].map((m) => m.nom).filter(Boolean);
   const lunesNow = () => state.identite.lunes;
-  const castNames = () => [state.identite.nom, ...names()];
-
-  /* ---------- retranscription en dialogue ---------- */
-  // Comprend « Nom : texte » (une réplique par ligne) et le copier-coller brut de Discord (« Nom — Aujourd'hui à 14:03 » puis le message).
-  function parseChat(text, known) {
-    const lines = String(text).replace(/\r/g, "").split("\n"), kn = known.map(O.norm);
-    const hdr = /^(.{1,60}?)\s+[—–]\s+(?:aujourd['’]hui|hier|\d{1,2}[\/.]\d{1,2}[\/.]\d{2,4}|\d{1,2}:\d{2})/i, col = /^(\S[^:\n]{0,48}?)\s*:\s*(.*)$/;
-    const okName = (n) => { n = n.trim(); return n && !/[.!?…»«"]/.test(n) && n.split(/\s+/).length <= 6 && /^[A-ZÀ-Ý0-9]/.test(n); };
-    const cnt = {}; lines.forEach((l) => { const m = l.match(col); if (m && okName(m[1])) cnt[O.norm(m[1])] = (cnt[O.norm(m[1])] || 0) + 1; });
-    const total = Object.values(cnt).reduce((a, b) => a + b, 0);
-    const accept = (n) => okName(n) && (kn.includes(O.norm(n)) || cnt[O.norm(n)] >= 2 || total <= 2);
-    const rows = []; let cur = null;
-    for (const raw of lines) {
-      const line = raw.trimEnd(); let m;
-      if ((m = line.match(hdr)) && okName(m[1])) { cur = { p: m[1].trim(), t: "" }; rows.push(cur); continue; }
-      if (!line.trim()) { if (cur && cur.t && !cur.t.endsWith("\n\n")) cur.t += "\n\n"; continue; }
-      if ((m = line.match(col)) && accept(m[1])) { cur = { p: m[1].trim(), t: m[2] }; rows.push(cur); continue; }
-      if (cur) cur.t += (cur.t && !cur.t.endsWith("\n") ? "\n" : "") + line; else { cur = { p: "", t: line }; rows.push(cur); }
-    }
-    rows.forEach((r) => (r.t = r.t.trim()));
-    return rows.filter((r) => r.t);
-  }
-  function dialogField(f, obj, wrap) {
-    const get = () => O.get(obj, f.k) || (O.set(obj, f.k, []), O.get(obj, f.k));
-    const box = el("div", "dlg"), tools = el("div", "dlg-tools"), list = el("div", "dlg-list"), imp = el("div", "dlg-import"); imp.hidden = true;
-    const cast = () => (obj.personnages || []).map((p) => p.nom).filter(Boolean);
-    const fit = (ta) => { ta.style.height = "auto"; ta.style.height = Math.max(ta.scrollHeight, 44) + "px"; };
-    const count = el("span", "dlg-count");
-    const mkBtn = (label, cls, fn) => { const b = el("button", cls || "btn small", label); b.type = "button"; b.onclick = fn; return b; };
-    const draw = () => {
-      list.innerHTML = ""; const arr = get(); count.textContent = arr.length + " réplique" + (arr.length > 1 ? "s" : "");
-      if (!arr.length) list.append(el("p", "empty-dlg", "Aucune réplique. Colle le texte du fil avec « Coller depuis Discord », ou ajoute-les une à une."));
-      arr.forEach((r, i) => {
-        const row = el("div", "dlg-row"), sel = el("select"), ta = el("textarea"), btns = el("div", "dlg-btns");
-        const fill = () => { sel.innerHTML = ""; sel.append(new Option("— Narration —", "")); const c = cast(); if (r.p && !c.includes(r.p)) c.push(r.p); c.forEach((n) => sel.append(new Option(n, n))); sel.value = r.p || ""; };
-        fill(); sel.onfocus = fill; sel.onchange = () => { r.p = sel.value; row.classList.toggle("narr", !r.p); touch(); };
-        ta.value = r.t || ""; ta.rows = 1; ta.placeholder = r.p ? "Ce que dit ou fait " + r.p + "…" : "Narration…"; row.classList.toggle("narr", !r.p);
-        ta.oninput = () => { r.t = ta.value; fit(ta); touch(); };
-        ta.onkeydown = (e) => { if ((e.ctrlKey || e.metaKey) && e.key === "Enter") { e.preventDefault(); arr.splice(i + 1, 0, { p: r.p, t: "" }); touch(); draw(); list.querySelectorAll("textarea")[i + 1].focus(); } };
-        [["↑", () => i > 0 && ([arr[i - 1], arr[i]] = [arr[i], arr[i - 1]], 1)], ["↓", () => i < arr.length - 1 && ([arr[i + 1], arr[i]] = [arr[i], arr[i + 1]], 1)], ["✕", () => (arr.splice(i, 1), 1)]].forEach(([s, fn]) => { const b = el("button", "mini" + (s === "✕" ? " danger" : ""), s); b.type = "button"; b.title = s === "✕" ? "Supprimer" : s === "↑" ? "Monter" : "Descendre"; b.onclick = () => { if (fn()) { touch(); draw(); } }; btns.append(b); });
-        row.append(sel, ta, btns); list.append(row); requestAnimationFrame(() => fit(ta));
-      });
-    };
-    const ta = el("textarea"); ta.rows = 8; ta.placeholder = "Colle ici le texte copié sur Discord, ou des lignes « Nom : texte ».\n\nExemple :\nÉtoile de Framboisier : *lève la tête* Je suis prêt.\nÉcho des Bois : Alors allons-y.";
-    const mode = el("select"); mode.append(new Option("Ajouter à la suite", "add"), new Option("Remplacer toute la retranscription", "replace"));
-    const go = mkBtn("Importer", "btn small primary", () => {
-      const rows = parseChat(ta.value, castNames()); if (!rows.length) return toast("Rien à importer : colle d'abord du texte.", true);
-      if (mode.value === "replace") { if (get().length && !confirm("Remplacer les " + get().length + " répliques actuelles ?")) return; O.set(obj, f.k, []); }
-      get().push(...rows);
-      const have = (obj.personnages = obj.personnages || []), part = (obj.participants = obj.participants || []), fresh = [];
-      rows.forEach((r) => { if (r.p && !have.some((p) => O.norm(p.nom) === O.norm(r.p))) { have.push({ nom: r.p, image: "" }); fresh.push(r.p); } if (r.p && !part.some((p) => O.norm(p) === O.norm(r.p))) part.push(r.p); });
-      touch(); ta.value = ""; imp.hidden = true; show(current);
-      toast(rows.length + " répliques importées" + (fresh.length ? " · personnages ajoutés : " + fresh.join(", ") : "") + ".");
-    });
-    imp.append(el("p", "hint", "Chaque nouveau nom devient un personnage (à qui tu peux ajouter une photo). Les <b>*italiques*</b>, <b>**gras**</b>, <b>__souligné__</b> et <b>~~barré~~</b> de Discord sont conservés."), ta, el("div", "dlg-import-bar"));
-    imp.lastChild.append(mode, go, mkBtn("Annuler", "btn small", () => (imp.hidden = true)));
-    tools.append(mkBtn("📋 Coller depuis Discord", "btn small", () => { imp.hidden = !imp.hidden; if (!imp.hidden) ta.focus(); }), mkBtn("+ Réplique", "btn small", () => { const a = get(); a.push({ p: (a[a.length - 1] || {}).p === (cast()[0] || "") ? cast()[1] || "" : cast()[0] || "", t: "" }); touch(); draw(); const t = list.querySelectorAll("textarea"); t[t.length - 1].focus(); }), mkBtn("+ Narration", "btn small", () => { get().push({ p: "", t: "" }); touch(); draw(); const t = list.querySelectorAll("textarea"); t[t.length - 1].focus(); }), count);
-    box.append(tools, imp, list); wrap.append(box); draw();
-  }
 
   const sumAvis = (it) => { const a = O.APP[it.appreciation]; return { title: "Lune " + (it.lune === "" || it.lune == null ? "?" : it.lune), sub: [a ? a.label : "", it.respect === "oui" ? "respect" : "", it.mitige === "oui" ? "mitigé" : "", O.ETAT[it.etat] || "", O.plain(it.texte).slice(0, 60)].filter(Boolean).join(" · "), badges: a ? [a.glyph] : [] }; };
   const relFields = (famille) => [
@@ -106,7 +46,7 @@
       F.row([F.yes("respect", "Il le·la respecte", { def: "non" }), F.yes("mitige", "Avis mitigé", { def: "non" })]),
       F.sel("etat", "Événement", [["", "— aucun"], ["mort", "Décédé·e (à cette lune)"], ["disparu", "Disparu·e (à cette lune)"], ["revenu", "Revenu·e"]]),
       R("texte", "Ce qui s'est passé / ce qu'il en pense"),
-    ], { sum: sumAvis, addLabel: "+ Ajouter un avis", blank: () => ({ lune: lunesNow(), appreciation: "neutre", respect: "non", mitige: "non", etat: "", texte: "" }) }),
+    ], { sum: sumAvis, sortBy: (it) => O.lunes(it), addLabel: "+ Ajouter un avis", blank: () => ({ lune: lunesNow(), appreciation: "neutre", respect: "non", mitige: "non", etat: "", texte: "" }) }),
   ];
   const sumRel = (it) => ({ title: it.nom || "(sans nom)", sub: [it.lien, it.groupe].filter(Boolean).join(" · "), thumb: it.image, badges: [it.statut === "mort" ? "✦" : it.statut === "disparu" ? "?" : "", (O.APP[(O.avisAt(it) || {}).appreciation] || {}).glyph || ""].filter(Boolean) });
   const relBlank = () => ({ nom: "", lien: "", groupe: "", rang: "", statut: "vivant", joueur: "PNJ", pseudo: "", image: "", notes: "", avant: "", renoms: [], avis: [] });
@@ -118,7 +58,7 @@
         F.group("", "Nom & accroche", [F.text("nom", "Nom"), F.text("sous_titre", "Sous-titre"), F.area("accroche", "Phrase d'accroche", { rows: 3 }), F.text("citation", "Citation d'accueil")], { bare: true }),
         F.group("", "Images", [F.img("image", "Portrait (accueil, en rond)", { crop: true, hint: "carré, recadrable" }), F.img("image2", "Illustration en pied (fiche physique)")], { bare: true, cols: true }),
         F.group("", "Fiche", [F.num("lunes", "Âge (lunes)"), F.num("lunes_meneur", "Âge à la nomination"), F.text("clan", "Clan"), F.text("rang", "Rang"), F.text("sexe", "Sexe"), F.text("orientation", "Orientation"), F.text("pelage", "Pelage"), F.text("yeux", "Yeux"), F.text("taille", "Taille"), F.text("poids", "Poids")], { bare: true, cols: true }),
-        F.group("", "Statistiques", [F.num("pv", "PV"), F.num("pa", "PA"), F.num("vies", "Vies restantes"), F.num("vies_max", "Vies au total"), F.num("origine_tonnerre", "Origine : % Clan du Tonnerre"), F.num("origine_domestique", "Origine : % Domestique")], { bare: true, cols: true }),
+        F.group("", "Statistiques", [F.num("pv", "PV"), F.num("pv_max", "PV maximum possible", { hint: "50 pour un chat ordinaire, 60 pour un meneur : le maximum du maximum." }), F.text("pv_note", "Note sous les PV"), F.num("pa", "PA"), F.num("vies", "Vies restantes"), F.num("vies_max", "Vies au total"), F.num("origine_tonnerre", "Origine : % Clan du Tonnerre"), F.num("origine_domestique", "Origine : % Domestique")], { bare: true, cols: true }),
         F.group("", "Joueur", [F.text("pseudo_joueur", "Pseudo du joueur"), F.text("credits", "Crédits (pied de page)")], { bare: true, cols: true }),
       ], { bare: true })] },
       { id: "reglages", ic: "⚙️", label: "Réglages du site", help: "Les pages du menu (ordre et visibilité), les couleurs et quelques textes. Les couleurs s'appliquent au thème « jour ».", defs: [
@@ -148,10 +88,8 @@
         F.text("lien", "Lien du fil Discord", { ph: "https://discord.com/channels/…" }),
         F.tags("participants", "Participants", { suggest: names, hint: "Ceux qui correspondent à une fiche deviennent des liens." }),
         F.area("description", "Résumé (affiché sur la carte)", { rows: 3 }),
-        F.items("personnages", "Personnages de la scène (nom + photo)", [F.text("nom", "Nom", { list: castNames }), F.img("image", "Photo", { crop: true, hint: "Facultatif : si le nom correspond à une fiche (ou à Framboisier), sa photo est reprise automatiquement." })], { sum: (it) => ({ title: it.nom || "(sans nom)", thumb: it.image }), addLabel: "+ Ajouter un personnage", blank: () => ({ nom: "", image: "" }), help: "Ils servent d'acteurs pour la retranscription ci-dessous." }),
-        F.dialog("repliques", "Retranscription en dialogue", { hint: "Colle le texte du fil : chaque réplique devient « Nom : texte », avec la photo du personnage." }),
-        R("texte", "Texte libre (avant le dialogue : mise en situation, narration…)", { tall: false }),
-      ], { sum: (it) => ({ title: it.titre || "(sans titre)", sub: [it.lune ? "lune " + it.lune : "", (THEMES.find((t) => t[0] === it.theme) || [])[1]].filter(Boolean).join(" · "), badges: [it.en_cours === "oui" ? "en cours" : "terminée"] }), addLabel: "+ Ajouter une scène", search: true, blank: () => ({ titre: "", lune: lunesNow(), theme: "calme", en_cours: "non", lien: "", participants: [], description: "", personnages: [], repliques: [], texte: "" }) })] },
+        R("texte", "Texte de la scène", { tall: true }),
+      ], { sum: (it) => ({ title: it.titre || "(sans titre)", sub: [it.lune ? "lune " + it.lune : "", (THEMES.find((t) => t[0] === it.theme) || [])[1]].filter(Boolean).join(" · "), badges: [it.en_cours === "oui" ? "en cours" : "terminée"] }), addLabel: "+ Ajouter une scène", search: true, sortBy: (it) => { const m = String(it.lune ?? "").match(/\d+/); return m ? +m[0] : 1e9; }, blank: () => ({ titre: "", lune: lunesNow(), theme: "calme", en_cours: "non", lien: "", participants: [], description: "", texte: "" }) })] },
     ] },
     { g: "Médias & extras", list: [
       { id: "galerie", ic: "🖼️", label: "Galerie", help: "Les illustrations de la galerie (cliquables en grand sur le site).", defs: [F.items("galerie", "Images", [F.text("titre", "Titre"), F.img("image", "Image"), F.area("description", "Légende", { rows: 2 })], { sum: (it) => ({ title: it.titre || "(sans titre)", sub: it.description, thumb: it.image }), addLabel: "+ Ajouter une image" })] },
@@ -304,8 +242,6 @@
       rc.onclick = () => run(async () => { const b = await cropper(O.safeSrc(url.value)); return b ? upload(b, "cadrage") : null; });
       const clr = el("button", "mini", "Retirer"); clr.type = "button"; clr.onclick = () => { url.value = ""; put(""); paint(); };
       row.append(prev, url, btn, rc, clr, file); wrap.append(row); paint(); inp = null;
-    } else if (f.t === "dialog") {
-      dialogField(f, obj, wrap); inp = null;
     } else if (f.t === "rich") {
       richField(f, obj, wrap, ctx); inp = null;
     } else if (f.t === "tags" || f.t === "strs") {
@@ -329,6 +265,7 @@
     const blank = () => (f.blank ? f.blank() : (function mk(fs) { const o = {}; fs.forEach((x) => { if (x.t === "group") Object.assign(o, mk(x.fields)); else if (x.k) o[x.k] = x.t === "tags" || x.t === "strs" ? [] : x.t === "yes" ? (x.def || "oui") : ""; }); return o; })(f.fields));
     const redraw = () => { const y = scrollY; const n = itemsField(f, obj, ctx); box.replaceWith(n); scrollTo(0, y); };
     box.append(el("div", "items-head", `<h3>${esc(f.label)} <span class="count">${arr.length}</span></h3>${f.help ? `<p class="hint">${esc(f.help)}</p>` : ""}`));
+    if (f.sortBy && arr.length > 1) { const sb2 = el("button", "mini sortbtn", "↕ Trier par lune (chronologique)"); sb2.type = "button"; sb2.onclick = () => { const s = arr.map((x, i) => [x, i]).sort((a, b) => f.sortBy(a[0]) - f.sortBy(b[0]) || a[1] - b[1]).map((x) => x[0]); arr.splice(0, arr.length, ...s); open.clear(); touch(); redraw(); toast("Trié par lune ✓"); }; box.append(sb2); }
     if (f.search && arr.length > 6) { const s = el("input"); s.type = "search"; s.placeholder = "Filtrer…"; s.className = "filter"; s.oninput = () => box.querySelectorAll(":scope > details.item").forEach((d) => (d.hidden = !O.norm(d.dataset.t).includes(O.norm(s.value)))); box.append(s); }
     arr.forEach((it, i) => {
       const d = el("details", "item"), k = key + "." + i, s = () => f.sum(it);

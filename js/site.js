@@ -38,6 +38,8 @@
     uniqSlugs(RELS, "nom", "fiche").forEach((s, i) => (RELS[i]._s = s));
     SCENES = (D.scenes || []).map((s) => ({ ...s }));
     uniqSlugs(SCENES, "titre", "scene").forEach((s, i) => (SCENES[i]._s = s));
+    const lu = (s) => { const m = String(s.lune ?? "").match(/\d+/); return m ? +m[0] : 1e9; };
+    SCENES = SCENES.map((s, i) => [s, i]).sort((a, b) => lu(a[0]) - lu(b[0]) || a[1] - b[1]).map((x) => x[0]); // chronologique : lune croissante, sans lune a la fin
     CHAPS = (D.histoire || []).map((c) => ({ ...c }));
     uniqSlugs(CHAPS, "titre", "chapitre").forEach((s, i) => (CHAPS[i]._s = s));
   }
@@ -58,7 +60,7 @@
 
   /* ---------- accueil ---------- */
   function home() {
-    const I = D.identite, vies = +I.vies || 0, max = +I.vies_max || 9, pv = Math.min(+I.pv || 0, 100), pa = +I.pa || 0, t = +I.origine_tonnerre || 0, d = +I.origine_domestique || 0;
+    const I = D.identite, vies = +I.vies || 0, max = +I.vies_max || 9, pvMax = +I.pv_max || 60, pv = Math.min(100, ((+I.pv || 0) / pvMax) * 100), pa = +I.pa || 0, t = +I.origine_tonnerre || 0, d = +I.origine_domestique || 0;
     const crown = Array.from({ length: max }, (_, i) => star(i < vies)).join("");
     const first = (D.reglages.sections.find((s) => s.actif !== "non" && s.id !== "libres") || {}).id || "personnage";
     const tiles = [
@@ -84,7 +86,7 @@
     </section>
     <section class="glance" aria-label="En un regard">
       <div class="g-card reveal"><b>Âge</b><strong>${esc(I.lunes)} lunes</strong><small>meneur depuis ses ${esc(I.lunes_meneur)} lunes</small></div>
-      <div class="g-card reveal"><b>PV</b><strong>${esc(I.pv)}</strong><div class="bar"><i style="--w:${pv}%"></i></div></div>
+      <div class="g-card reveal"><b>PV</b><strong>${esc(I.pv)} <small>/ ${pvMax}</small></strong><div class="bar"><i style="--w:${pv}%"></i></div><small>${esc(I.pv_note || "")}</small></div>
       <div class="g-card reveal"><b>PA</b><strong>${esc(I.pa)}</strong><div class="pips">${Array.from({ length: Math.max(pa, 6) }, (_, i) => `<i class="${i < pa ? "on" : ""}"></i>`).join("")}</div></div>
       <div class="g-card reveal"><b>Gabarit</b><strong>${esc(I.taille)}</strong><small>${esc(I.poids)}</small></div>
       <div class="g-card reveal"><b>Pelage</b><strong>${esc(I.pelage)}</strong><small>yeux : ${esc(I.yeux)}</small></div>
@@ -143,7 +145,7 @@
   }
 
   /* ---------- relations ---------- */
-  const REL = [["famille", "Famille"], ["diverses", "Relations diverses"], ["ensemble", "Vue d'ensemble"]];
+  const REL = [["famille", "Famille"], ["diverses", "Relations diverses"], ["ensemble", "Toutes les relations"]];
   const appBadge = (a, L) => { const k = O.avisAt(a, L); return k ? `<span class="app ${O.APP[k.appreciation].g}" title="${esc(O.APP[k.appreciation].label)}">${O.APP[k.appreciation].glyph}</span>` : ""; };
   const stBadge = (st) => (st === "mort" ? '<em class="dec">✦ Décédé·e</em>' : st === "disparu" ? '<em class="gone">? Disparu·e</em>' : '<em class="alive">Vivant·e</em>');
   function avatar(r, big) {
@@ -168,7 +170,7 @@
     if (cur === "diverses") body = `<p class="sec-sub reveal">Mentors, apprentis, amis, rivaux… Clique sur une carte pour ouvrir la fiche et suivre l'évolution de son avis, lune après lune.</p>${groups(RELS.filter((r) => r._k === "diverses"))}`;
     if (cur === "ensemble") {
       const M = maxLune(), clans = unique(RELS.map((r) => r.groupe));
-      body = `<p class="sec-sub reveal">Toutes les fiches au même endroit. Fais glisser le curseur pour voir ce que Framboisier pensait de chacun à une lune donnée.</p>
+      body = `<p class="sec-sub reveal">Toutes les fiches (famille et relations diverses) sur une seule page, avec recherche et filtres : par clan, par état (vivant, décédé, disparu) ou par appréciation. Le curseur « À la lune » remonte le temps : il montre ce que Framboisier pensait de chacun à cette lune, et qui était encore là.</p>
         <div class="ens reveal"><div class="ens-row"><input type="search" id="q" placeholder="Chercher un nom…" aria-label="Chercher un nom">
           <select id="f-kind" aria-label="Type"><option value="">Toutes les fiches</option><option value="famille">Famille</option><option value="diverses">Relations diverses</option></select>
           <select id="f-clan" aria-label="Clan"><option value="">Tous les clans</option>${clans.map((c) => `<option>${esc(c)}</option>`).join("")}</select>
@@ -222,7 +224,7 @@
   const sceneState = (s) => (s.en_cours === "oui" ? '<span class="state live">● En cours</span>' : '<span class="state done">✓ Terminée</span>');
   function sceneCard(s) {
     const T = THEMES[s.theme] || THEMES.calme;
-    return `<li class="scene-card" data-theme="${esc(THEMES[s.theme] ? s.theme : "calme")}" data-live="${s.en_cours === "oui" ? 1 : 0}" data-q="${esc(O.norm([s.titre, s.description, (s.participants || []).join(" ")].join(" ")))}">
+    return `<li class="scene-card" data-i="${SCENES.indexOf(s)}" data-u="${/\d/.test(String(s.lune ?? "")) ? 0 : 1}" data-theme="${esc(THEMES[s.theme] ? s.theme : "calme")}" data-live="${s.en_cours === "oui" ? 1 : 0}" data-q="${esc(O.norm([s.titre, s.description, (s.participants || []).join(" ")].join(" ")))}">
       <span class="sc-theme" title="${esc(T.l)}">${T.ic} ${esc(T.l)}</span>
       <h3><a class="sc-link" href="#/scenes/${s._s}">${esc(s.titre)}</a></h3>
       <p class="sc-meta">${s.lune !== "" && s.lune != null ? `Lune ${esc(s.lune)} · ` : ""}${sceneState(s)}</p>
@@ -236,45 +238,21 @@
     return head("Role-play", "Scènes RP", "Tous les fils de Framboisier, retranscrits pour pouvoir être lus ici. Le bouton Discord ouvre le fil d'origine.") +
       (SCENES.length ? `<div class="ens reveal"><div class="ens-row"><input type="search" id="sq" placeholder="Chercher un titre, un participant…" aria-label="Chercher une scène">
         <select id="sf-live" aria-label="Statut"><option value="">Toutes</option><option value="1">En cours</option><option value="0">Terminées</option></select>
-        <select id="sf-theme" aria-label="Ambiance"><option value="">Toutes les ambiances</option>${used.map((t) => `<option value="${t}">${(THEMES[t] || THEMES.calme).ic} ${(THEMES[t] || THEMES.calme).l}</option>`).join("")}</select></div></div>
-        <ul class="scene-list" id="scene-list">${[...SCENES].sort((a, b) => (parseInt(b.lune) || 0) - (parseInt(a.lune) || 0)).map(sceneCard).join("")}</ul><p class="empty" id="scene-none" hidden>Aucune scène ne correspond.</p>` : empty("Aucune scène pour le moment."));
+        <select id="sf-theme" aria-label="Ambiance"><option value="">Toutes les ambiances</option>${used.map((t) => `<option value="${t}">${(THEMES[t] || THEMES.calme).ic} ${(THEMES[t] || THEMES.calme).l}</option>`).join("")}</select>
+        <select id="sf-order" aria-label="Ordre"><option value="asc">Du plus ancien au plus récent</option><option value="desc">Du plus récent au plus ancien</option></select></div></div>
+        <ul class="scene-list" id="scene-list">${SCENES.map(sceneCard).join("")}</ul><p class="empty" id="scene-none" hidden>Aucune scène ne correspond.</p>` : empty("Aucune scène pour le moment."));
   }
   function bindScenes() {
     const l = $("#scene-list"); if (!l) return;
     const f = () => { const q = O.norm($("#sq").value), lv = $("#sf-live").value, th = $("#sf-theme").value; let n = 0; $$(".scene-card", l).forEach((c) => { const ok = (!q || c.dataset.q.includes(q)) && (!lv || c.dataset.live === lv) && (!th || c.dataset.theme === th); c.hidden = !ok; if (ok) n++; }); $("#scene-none").hidden = n > 0; };
     $$(".ens input, .ens select").forEach((e) => e.addEventListener("input", f));
+    $("#sf-order").addEventListener("input", (e) => { const c = [...l.children]; c.sort((a, b) => +a.dataset.i - +b.dataset.i); (e.target.value === "desc" ? [...c.filter((x) => x.dataset.u === "0").reverse(), ...c.filter((x) => x.dataset.u === "1")] : c).forEach((x) => l.append(x)); });
   }
   const FS = () => { try { return +localStorage.getItem("fr-fs") || 1.1; } catch (e) { return 1.1; } };
-  // Retranscription en dialogue : « Nom : texte », avec photo (personnage de la scène → fiche correspondante → Framboisier → initiales).
-  function photoFor(s, name) {
-    const sl = O.slug(name), p = (s.personnages || []).find((x) => O.slug(x.nom) === sl);
-    if (p && O.safeSrc(p.image)) return p.image;
-    const idx = nameIndex(), rel = RELS.find((r) => r._s === idx[sl]);
-    if (rel && O.safeSrc(rel.image)) return rel.image;
-    const me = O.slug(D.identite.nom); if (sl && (sl === me || (sl.length >= 6 && me.includes(sl)))) return D.identite.image;
-    return "";
-  }
-  const hueOf = (n) => [...String(n)].reduce((a, c) => (a * 31 + c.charCodeAt(0)) % 360, 7);
-  function chat(s) {
-    const rows = (s.repliques || []).filter((r) => r && String(r.t || "").trim());
-    if (!rows.length) return "";
-    const idx = nameIndex(), cast = unique(rows.map((r) => r.p));
-    const fmtT = (t) => String(t).split(/\n{2,}/).map((p) => `<p>${fmt(p.trim())}</p>`).join("");
-    const av = (n) => { const src = O.safeSrc(photoFor(s, n)); return `<div class="avatar sm" style="--h:${hueOf(n)}">${src ? `<img src="${esc(src)}" alt="" loading="lazy" decoding="async">` : esc(O.initials(n))}</div>`; };
-    let prev = null;
-    const body = rows.map((r) => {
-      if (!r.p) { prev = null; return `<div class="msg narr">${fmtT(r.t)}</div>`; }
-      const same = prev === r.p; prev = r.p;
-      const link = idx[O.slug(r.p)] ? `<a href="#/relations/fiche/${idx[O.slug(r.p)]}">${esc(r.p)}</a>` : esc(r.p);
-      return `<div class="msg${same ? " same" : ""}" style="--h:${hueOf(r.p)}">${same ? '<span class="av-gap"></span>' : av(r.p)}<div class="msg-b">${same ? "" : `<strong class="who">${link}</strong>`}<div class="msg-t">${fmtT(r.t)}</div></div></div>`;
-    }).join("");
-    const legend = cast.filter(Boolean).length > 1 ? `<ul class="cast" aria-label="Personnages">${cast.filter(Boolean).map((n) => `<li>${av(n)}<span>${esc(n)}</span></li>`).join("")}</ul>` : "";
-    return `<div class="chat">${legend}${body}</div>`;
-  }
   function scene(id) {
     const i = SCENES.findIndex((s) => s._s === id), s = SCENES[i];
     if (!s) return head("Role-play", "Scène introuvable") + empty('<a href="#/scenes">Retour aux scènes</a>');
-    const T = THEMES[s.theme] || THEMES.calme, th = THEMES[s.theme] ? s.theme : "calme", body = rich(s.texte, "reader story") + chat(s);
+    const T = THEMES[s.theme] || THEMES.calme, th = THEMES[s.theme] ? s.theme : "calme", body = rich(s.texte, "reader story");
     return `<p class="back reveal"><a href="#/scenes">← Toutes les scènes</a></p>
       <article class="scene" data-theme="${th}">
         <header class="scene-head reveal"><p class="sc-theme">${T.ic} ${esc(T.l)}</p><h1>${esc(s.titre)}</h1>
