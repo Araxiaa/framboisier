@@ -198,7 +198,7 @@ main { max-width: 1140px; margin: 0 auto; padding: 0 clamp(1.1rem, 4vw, 2.4rem);
 .member > div:last-child { min-width: 0; flex: 1; }
 .badges { display: flex; flex-wrap: wrap; gap: .35rem; margin-top: .4rem; } .badges em { white-space: nowrap; font-style: normal; font-size: .72rem; font-weight: 700; padding: .1rem .55rem; border-radius: 999px; background: var(--line); color: var(--muted); }
 .badges .alive { background: color-mix(in srgb, #5ec18c 25%, transparent); color: #2f7d55; } :root[data-theme="nuit"] .badges .alive { color: #8be0b4; }
-.badges .star { background: color-mix(in srgb, var(--apricot) 25%, transparent); color: var(--ink); } .badges .pj { background: color-mix(in srgb, var(--aqua) 25%, transparent); color: var(--ink); }
+.badges .dec { background: color-mix(in srgb, var(--apricot) 25%, transparent); color: var(--ink); } .badges .pj { background: color-mix(in srgb, var(--aqua) 25%, transparent); color: var(--ink); }
 .mentors { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1rem; }
 .mentor { padding: 1.4rem; border-radius: var(--r); background: var(--card); border: 1px solid var(--line); box-shadow: var(--shadow); } .mentor h4 { font-size: 1.35rem; margin: .2rem 0 .6rem; } .mentor p { margin: 0; font-size: .98rem; }
 .role { font: 700 .72rem var(--sans); letter-spacing: .16em; text-transform: uppercase; color: var(--mauve); }

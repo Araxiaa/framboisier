@@ -136,10 +136,18 @@ window.DEFAULT_CONTENT = {
     { nom: "Petit Cygne", lien: "Chaton adoptif", groupe: "Descendance", statut: "vivant", joueur: "PJ", note: "", image: "" },
   ],
 
-  mentorat: [
-    { nom: "Écho des Bois", role: "Sa mentor", statut: "vivant", joueur: "PNJ", texte: "Une figure essentielle dans sa vie. Étoile de Framboisier l'apprécie énormément, au point de la considérer comme une véritable mère adoptive. Elle est cette figure de soutien qu'il aurait tant aimé avoir auprès de lui durant son enfance pour l'épauler dans son développement. Bien que sa pudeur et son côté hautain l'empêchent de le dire ouvertement, il lui voue une gratitude et une affection sans bornes." },
-    { nom: "Nuage de Fouine", role: "Son apprenti", statut: "vivant", joueur: "PNJ", texte: "Ce jeune apprenti partageait son calme et son sens aigu de l'observation. Leur relation fut excellente, les deux félins s'entendant à merveille grâce à leur vision commune de la forêt, faite de silence et de patience." },
+  // Relations diverses (mentor, apprenti, amis, rivaux…). Même fiche que la famille : avis datés, état, changements de nom, image cadrée.
+  relations: [
+    { nom: "Écho des Bois", lien: "Sa mentor", groupe: "Clan du Tonnerre", rang: "Guerrière", statut: "vivant", joueur: "PNJ", pseudo: "", image: "", avant: "", renoms: [],
+      notes: "Une figure essentielle dans sa vie.",
+      avis: [{ lune: "", appreciation: "pos3", respect: "oui", mitige: "non", etat: "", texte: "Étoile de Framboisier l'apprécie énormément, au point de la considérer comme une véritable mère adoptive. Elle est cette figure de soutien qu'il aurait tant aimé avoir auprès de lui durant son enfance pour l'épauler dans son développement. Bien que sa pudeur et son côté hautain l'empêchent de le dire ouvertement, il lui voue une gratitude et une affection sans bornes." }] },
+    { nom: "Nuage de Fouine", lien: "Son apprenti", groupe: "Clan du Tonnerre", rang: "Apprenti", statut: "vivant", joueur: "PNJ", pseudo: "", image: "", avant: "", renoms: [],
+      notes: "Lorsqu'il fut mentor, il eut sous sa garde Nuage de Fouine.",
+      avis: [{ lune: "", appreciation: "pos2", respect: "non", mitige: "non", etat: "", texte: "Ce jeune apprenti partageait son calme et son sens aigu de l'observation. Leur relation fut excellente, les deux félins s'entendant à merveille grâce à leur vision commune de la forêt, faite de silence et de patience." }] },
   ],
+
+  // Fils de RP : { titre, lien (Discord), participants: [], lune, description, en_cours: "oui"|"non", theme, texte (riche) }
+  scenes: [],
 
   histoire: [
     { titre: "La Fratrie des Baies", periode: "Enfance et apprentissage", paragraphes: [
@@ -192,15 +200,12 @@ window.DEFAULT_CONTENT = {
   reglages: {
     // Ordre et visibilité des sections du site (modifiables dans le dashboard)
     sections: [
-      { id: "noms", nom: "Les noms", actif: "oui" },
-      { id: "caractere", nom: "Caractère", actif: "oui" },
-      { id: "gouts", nom: "Goûts & peurs", actif: "oui" },
-      { id: "physique", nom: "Physique", actif: "oui" },
-      { id: "famille", nom: "Famille", actif: "oui" },
+      { id: "personnage", nom: "Personnage", actif: "oui" },
       { id: "histoire", nom: "Histoire", actif: "oui" },
-      { id: "convictions", nom: "Convictions", actif: "oui" },
-      { id: "libres", nom: "Sections libres", actif: "oui" },
+      { id: "relations", nom: "Relations", actif: "oui" },
+      { id: "scenes", nom: "Scènes RP", actif: "oui" },
       { id: "galerie", nom: "Galerie", actif: "oui" },
+      { id: "libres", nom: "Pages libres", actif: "oui" },
     ],
     particules: "oui",
     couleur_creme: "#fff6e6",
